@@ -10,25 +10,23 @@ from frappe.utils import nowdate, getdate
 from erpnext.accounts.utils import get_outstanding_invoices, get_account_currency
 from erpnext.setup.utils import get_exchange_rate
 from erpnext.controllers.accounts_controller import get_supplier_block_status
+from six import iteritems, string_types
 from erpnext.accounts.doctype.payment_entry.payment_entry import (
     get_orders_to_be_billed,
     get_negative_outstanding_invoices,
+    split_invoices_based_on_payment_terms
 )
 from frappe import ValidationError, _, qb, scrub, throw
 
 
 @frappe.whitelist()
 def get_outstanding_reference_documents(args):
-    if isinstance(args, str):
+
+    if isinstance(args, string_types):
         args = json.loads(args)
 
     if args.get("party_type") == "Member":
         return
-
-    ple = qb.DocType("Payment Ledger Entry")
-    common_filter = []
-    accounting_dimensions_filter = []
-    posting_and_due_date = []
 
     # confirm that Supplier is not blocked
     if args.get("party_type") == "Supplier":
@@ -45,19 +43,16 @@ def get_outstanding_reference_documents(args):
     party_account_currency = get_account_currency(args.get("party_account"))
     company_currency = frappe.get_cached_value("Company", args.get("company"), "default_currency")
 
-    # Get positive outstanding sales /purchase invoices
+    # Get positive outstanding sales /purchase invoices/ Fees
     condition = ""
     if args.get("voucher_type") and args.get("voucher_no"):
         condition = " and voucher_type={0} and voucher_no={1}".format(
             frappe.db.escape(args["voucher_type"]), frappe.db.escape(args["voucher_no"])
         )
-        common_filter.append(ple.voucher_type == args["voucher_type"])
-        common_filter.append(ple.voucher_no == args["voucher_no"])
 
     # Add cost center condition
-    # if args.get("cost_center"):
-    # 	condition += " and cost_center='%s'" % args.get("cost_center")
-    # 	accounting_dimensions_filter.append(ple.cost_center == args.get("cost_center"))
+    if args.get("cost_center"):
+        condition += " and cost_center='%s'" % args.get("cost_center")
 
     date_fields_dict = {
         "posting_date": ["from_posting_date", "to_posting_date"],
@@ -69,29 +64,25 @@ def get_outstanding_reference_documents(args):
             condition += " and {0} between '{1}' and '{2}'".format(
                 fieldname, args.get(date_fields[0]), args.get(date_fields[1])
             )
-            posting_and_due_date.append(ple[fieldname][args.get(date_fields[0]) : args.get(date_fields[1])])
 
     if args.get("company"):
         condition += " and company = {0}".format(frappe.db.escape(args.get("company")))
-        common_filter.append(ple.company == args.get("company"))
 
     outstanding_invoices = get_outstanding_invoices(
         args.get("party_type"),
         args.get("party"),
         args.get("party_account"),
-        common_filter=common_filter,
-        posting_date=posting_and_due_date,
-        min_outstanding=args.get("outstanding_amt_greater_than"),
-        max_outstanding=args.get("outstanding_amt_less_than"),
-        accounting_dimensions=accounting_dimensions_filter,
+        args.get("company"),
+        filters=args,
+        condition=condition,
     )
-    from erpnext.accounts.doctype.payment_entry.payment_entry import split_invoices_based_on_payment_terms
+
     outstanding_invoices = split_invoices_based_on_payment_terms(outstanding_invoices)
 
     for d in outstanding_invoices:
         d["exchange_rate"] = 1
         if party_account_currency != company_currency:
-            if d.voucher_type in frappe.get_hooks("invoice_doctypes"):
+            if d.voucher_type in ("Sales Invoice", "Purchase Invoice", "Expense Claim"):
                 d["exchange_rate"] = frappe.db.get_value(d.voucher_type, d.voucher_no, "conversion_rate")
             elif d.voucher_type == "Journal Entry":
                 d["exchange_rate"] = get_exchange_rate(
@@ -102,19 +93,20 @@ def get_outstanding_reference_documents(args):
 
     # Get all SO / PO which are not fully billed or against which full advance not paid
     orders_to_be_billed = []
-    orders_to_be_billed = get_orders_to_be_billed(
-        args.get("posting_date"),
-        args.get("party_type"),
-        args.get("party"),
-        args.get("company"),
-        party_account_currency,
-        company_currency,
-        filters=args,
-    )
+    if args.get("party_type") != "Student":
+        orders_to_be_billed = get_orders_to_be_billed(
+            args.get("posting_date"),
+            args.get("party_type"),
+            args.get("party"),
+            args.get("company"),
+            party_account_currency,
+            company_currency,
+            filters=args,
+        )
 
     # Get negative outstanding sales /purchase invoices
     negative_outstanding_invoices = []
-    if args.get("party_type") != "Employee" and not args.get("voucher_no"):
+    if args.get("party_type") not in ["Student", "Employee"] and not args.get("voucher_no"):
         negative_outstanding_invoices = get_negative_outstanding_invoices(
             args.get("party_type"),
             args.get("party"),
@@ -134,3 +126,4 @@ def get_outstanding_reference_documents(args):
         )
 
     return data
+
