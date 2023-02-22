@@ -400,8 +400,8 @@ def get_deduction_data(data, salary_slips, currency, company_currency, prev_ss_d
 	data.append({
 		"deartment": "",
 		"salary_component": "NET PAY BEFORE LOAN",
-		"total_prev_month": prev_gross_pay + total_prev_deduction,
-		"total_cur_month": cur_gross_pay + total_cur_deduction,
+		"total_prev_month": prev_gross_pay - total_prev_deduction,
+		"total_cur_month": cur_gross_pay - total_cur_deduction,
 		"difference_amount": h
 	})
 
