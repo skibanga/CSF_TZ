@@ -364,6 +364,7 @@ doc_events = {
         "validate": "csf_tz.custom_api.getInvoiceExchangeRate"
     },
     "Sales Invoice": {
+        "before_submit": "csf_tz.custom_api.validate_grand_total",
         "on_submit": [
             "csf_tz.custom_api.validate_net_rate",
             "csf_tz.custom_api.create_delivery_note",
