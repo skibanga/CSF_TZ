@@ -2103,4 +2103,17 @@ def update_row_item(row, batch_obj, quantity, fields_to_clear, conversion_factor
     })
 
     return new_row
- 
+  
+def validate_grand_total(doc, method):
+    """Validate grand total of sales invoice"""
+
+    if len(doc.items) > 0:
+        total_amount = sum([item.amount for item in doc.items])
+
+        payment_amount = sum([payment.amount for payment in doc.payments])
+    
+        if payment_amount and total_amount != payment_amount:
+            frappe.throw(_(f"<h4 class='text-center' style='background-color: #D3D3D3; font-weight: bold; font-size: 14px'>\
+                Total Amount for all Items: <strong>{total_amount}</strong> must be equal to Paid Amount: <strong>{payment_amount}</strong>,<br>\
+                Please check before submitting this invoice </h4>")
+            )
