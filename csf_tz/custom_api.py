@@ -1769,13 +1769,16 @@ def batch_splitting(doc, method):
     this works only if is_return = 0, update_stock = 1 and allow batch splitting is ticked on CSF TZ Settings
     """
     if doc.is_return == 1:
-        return 
-
-    if not doc.update_stock:
         return
-       
+
+    if not doc.update_stock == 0:
+        return
+
     if not frappe.db.get_single_value('CSF TZ Settings', "allow_batch_splitting"):
         return
+
+    if not doc.set_warehouse and doc.pos_profile:
+        doc.set_warehouse = frappe.db.get_value("POS Profile", doc.pos_profile, "warehouse")
 
     if not doc.set_warehouse:
         frappe.throw(_("<h4>Please set source warehouse first</h4>"))
