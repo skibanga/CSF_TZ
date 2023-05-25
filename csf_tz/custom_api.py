@@ -8,7 +8,16 @@ import traceback
 import pyqrcode
 import io
 import base64
-from frappe.utils import flt, cint, getdate, get_datetime, nowdate, nowtime, add_days, unique
+from frappe.utils import (
+    flt,
+    cint,
+    getdate,
+    get_datetime,
+    nowdate,
+    nowtime,
+    add_days,
+    unique,
+)
 from frappe.model.mapper import get_mapped_doc
 from frappe.desk.form.linked_with import get_linked_docs, get_linked_doctypes
 from erpnext.stock.utils import get_stock_balance, get_latest_stock_qty
@@ -865,7 +874,9 @@ def validate_item_remaining_qty(
 
         item_remaining_qty = item_balance - qty_to_reduce - pending_si
         if item_remaining_qty < 0:
-            if not frappe.db.get_single_value("CSF TZ Settings", "item_qty_poppup_message"):
+            if not frappe.db.get_single_value(
+                "CSF TZ Settings", "item_qty_poppup_message"
+            ):
                 frappe.msgprint(
                     _(
                         "Item Balance: '{2}'<br>Pending Sales Order: '{3}'<br>Pending Direct Sales Invoice: {5}<br>Current request is {4}<br><b>Results into balance Qty for '{0}' to '{1}'</b>".format(
@@ -876,7 +887,8 @@ def validate_item_remaining_qty(
                             float(stock_qty),
                             pending_si,
                         )
-                    ), alert=True
+                    ),
+                    alert=True,
                 )
 
             else:
@@ -1486,6 +1498,7 @@ def set_fee_abbr(doc=None, method=None):
         return
     doc.abbr = frappe.get_value("Company", doc.company, "abbr")
 
+
 @frappe.whitelist()
 def get_tax_category(doc_type, company):
     fetch_default_tax_category = (
@@ -1669,13 +1682,17 @@ def validate_payroll_entry_field(payroll_entry):
 def auto_close_dn():
     """
     Mark delivery note as closed per customer, depending on the days specified on customer
-    
+
     This routine will run every day 3:30am at night
     """
 
     dn_list = []
 
-    customer_details = frappe.get_all("Customer", filters={"csf_tz_is_auto_close_dn": 1}, fields=["name", "csf_tz_close_dn_after"])
+    customer_details = frappe.get_all(
+        "Customer",
+        filters={"csf_tz_is_auto_close_dn": 1},
+        fields=["name", "csf_tz_close_dn_after"],
+    )
 
     if not customer_details:
         return
@@ -1685,9 +1702,14 @@ def auto_close_dn():
             "docstatus": 1,
             "customer": customer.name,
             "status": ["!=", "Closed"],
-            "posting_date": ["<", add_days(nowdate(), days=(-1 * customer.csf_tz_close_dn_after))],
+            "posting_date": [
+                "<",
+                add_days(nowdate(), days=(-1 * customer.csf_tz_close_dn_after)),
+            ],
         }
-        dn_list += frappe.get_all("Delivery Note", filters=filters, fields=["name"], pluck="name")
+        dn_list += frappe.get_all(
+            "Delivery Note", filters=filters, fields=["name"], pluck="name"
+        )
 
     for dn in dn_list:
         frappe.db.set_value("Delivery Note", dn, "status", "Closed")
@@ -1700,25 +1722,38 @@ def batch_splitting(doc, method):
     this works only if is_return = 0, update_stock = 1 and allow batch splitting is ticked on CSF TZ Settings
     """
     if doc.is_return == 1:
-        return 
+        return
 
     if not doc.update_stock == 0:
         return
-       
-    if not frappe.db.get_single_value('CSF TZ Settings', "allow_batch_splitting"):
+
+    if not frappe.db.get_single_value("CSF TZ Settings", "allow_batch_splitting"):
         return
 
     if not doc.set_warehouse and doc.pos_profile:
-        doc.set_warehouse = frappe.db.get_value("POS Profile", doc.pos_profile, "warehouse")
-        
+        doc.set_warehouse = frappe.db.get_value(
+            "POS Profile", doc.pos_profile, "warehouse"
+        )
+
     if not doc.set_warehouse:
-        frappe.throw(_("<h4>Please set source warehouse first</h4>"))   
-        
+        frappe.throw(_("<h4>Please set source warehouse first</h4>"))
+
     warehouse = doc.set_warehouse
 
     source_doc = doc
 
-    fields_to_clear = ["name", "owner", "creation", "modified", "modified_by", "docstatus", "parentfield", "parenttype", "parent", "doctype"]
+    fields_to_clear = [
+        "name",
+        "owner",
+        "creation",
+        "modified",
+        "modified_by",
+        "docstatus",
+        "parentfield",
+        "parenttype",
+        "parent",
+        "doctype",
+    ]
 
     single_entries, dupl_entries = get_item_duplicates(source_doc)
     doc.items = []
@@ -1732,7 +1767,6 @@ def batch_splitting(doc, method):
     doc.set_warehouse = warehouse
 
 
-
 def get_item_duplicates(source_doc):
     single_items = []
     duplicated_items = []
@@ -1742,20 +1776,26 @@ def get_item_duplicates(source_doc):
             duplicated_items.append(item)
         else:
             single_items.append(item)
-    
     return single_items, duplicated_items
 
 
 def get_batch_per_item(item_code, posting_date, warehouse):
-    """"fetch batch details for item code and warehouse"""
+    """Get batch details per item code and warehouse"""
 
     conditions = ""
     if warehouse:
-        conditions = "sle.item_code = '%s' and sle.is_cancelled = 0 and sle.batch_no != '' and sle.warehouse = '%s' "%(item_code, warehouse)
+        conditions = (
+            "sle.item_code = '%s' and sle.is_cancelled = 0 and sle.batch_no != '' and sle.warehouse = '%s' "
+            % (item_code, warehouse)
+        )
     else:
-        conditions = "sle.item_code = '%s' and sle.is_cancelled = 0 and sle.batch_no != '' "%(item_code)
-    
-    batch_records = frappe.db.sql("""
+        conditions = (
+            "sle.item_code = '%s' and sle.is_cancelled = 0 and sle.batch_no != '' "
+            % (item_code)
+        )
+
+    batch_records = frappe.db.sql(
+        """
         select sle.batch_no, sle.warehouse, sum(sle.actual_qty) as qty, ba.stock_uom, ba.expiry_date
         from `tabStock Ledger Entry` sle 
         inner join `tabBatch` ba on sle.batch_no = ba.batch_id
@@ -1763,13 +1803,27 @@ def get_batch_per_item(item_code, posting_date, warehouse):
         AND ba.expiry_date >= %s
         group by sle.batch_no, sle.warehouse
         order by ba.expiry_date
-        """.format(conditions=conditions), posting_date, as_dict=True
+        """.format(
+            conditions=conditions
+        ),
+        posting_date,
+        as_dict=True,
     )
     return batch_records
-    
+
 
 def allocate_batches_for_single_items(doc, items, warehouse, fields_to_clear):
-    """allocate batch quantities of single items before inserting of sales invoice"""
+    """Allocate batches for single items before inserting of sales invoice
+    
+    Parameters:
+        doc (object): sales invoice object
+        items (list): list of items
+        warehouse (str): warehouse
+        fields_to_clear (list): list of fields to clear
+
+    Returns:
+        None
+    """
 
     if not items:
         return
@@ -1787,46 +1841,70 @@ def allocate_batches_for_single_items(doc, items, warehouse, fields_to_clear):
                     continue
 
                 if row.conversion_factor > 1:
-                    b_qty = cint(single_items_allocate_qty_per_conversion_factor(
-                        doc, row, batch_obj, fields_to_clear, b_qty
-                    ))
-                
+                    b_qty = cint(
+                        single_items_allocate_qty_per_conversion_factor(
+                            doc, row, batch_obj, fields_to_clear, b_qty
+                        )
+                    )
+
                 else:
                     if batch_obj.qty > 0 and b_qty < row.qty:
                         remainder = row.qty - b_qty
                         if remainder - batch_obj.qty >= 0:
-                            new_row = update_row_item(row, batch_obj, batch_obj.qty, fields_to_clear)
+                            new_row = update_row_item(
+                                row, batch_obj, batch_obj.qty, fields_to_clear
+                            )
                             b_qty = b_qty + batch_obj.qty
-                        
+
                             doc.append("items", new_row)
-                        
+
                         elif remainder - batch_obj.qty < 0:
-                            new_row = update_row_item(row, batch_obj, remainder, fields_to_clear)
+                            new_row = update_row_item(
+                                row, batch_obj, remainder, fields_to_clear
+                            )
                             b_qty = b_qty + remainder
-                        
+
                             doc.append("items", new_row)
-            
+
             if b_qty < row.qty:
-                frappe.throw("Qty: {0} available for item: {1} on warehouse: {2} is not enough to complete requested Qty: {3}<br>\
+                frappe.throw(
+                    "Qty: {0} available for item: {1} on warehouse: {2} is not enough to complete requested Qty: {3}<br>\
                 Please update sales order: {4} to match the Qty available on stock".format(
-                    frappe.bold(b_qty), frappe.bold(row.item_code), frappe.bold(warehouse), frappe.bold(row.qty), frappe.bold(row.parent)
-                ))
-        
+                        frappe.bold(b_qty),
+                        frappe.bold(row.item_code),
+                        frappe.bold(warehouse),
+                        frappe.bold(row.qty),
+                        frappe.bold(row.parent),
+                    )
+                )
+
         else:
             new_row = row.as_dict()
             for fieldname in fields_to_clear:
-                new_row[fieldname] =  None
+                new_row[fieldname] = None
             doc.append("items", new_row)
-    
 
-def allocate_batch_for_duplicate_items(doc, duplicated_items, warehouse, fields_to_clear):
-    """Allocate batch quantities to duplicated items on before inserting sales invoice"""
+
+def allocate_batch_for_duplicate_items(
+    doc, duplicated_items, warehouse, fields_to_clear
+):
+    """Allocate batch quantities to duplicated items on before inserting sales invoice
+    
+    Parameters:
+        doc (object): sales invoice object
+        duplicated_items (list): list of duplicated items
+        warehouse (str): warehouse
+        fields_to_clear (list): list of fields to clear
+
+    Returns:
+        None
+    """
 
     if not duplicated_items:
         return
-    
-    unique_names = unique([d.item_code for d in duplicated_items ])
-    
+
+    unique_names = unique([d.item_code for d in duplicated_items])
+
     for item_code in unique_names:
         batches = get_batch_per_item(item_code, doc.posting_date, warehouse)
 
@@ -1846,43 +1924,69 @@ def allocate_batch_for_duplicate_items(doc, duplicated_items, warehouse, fields_
 
                         if batch_obj.batch_no not in batch_used:
                             if item.conversion_factor > 1:
-                                b_qty, batch_used, qty_remain_per_batch_obj = duplicated_items_allocate_qty_per_conversion_factor(
-                                    doc, item, batch_obj, fields_to_clear, batch_used, qty_remain_per_batch_obj, b_qty
+                                (
+                                    b_qty,
+                                    batch_used,
+                                    qty_remain_per_batch_obj,
+                                ) = duplicated_items_allocate_qty_per_conversion_factor(
+                                    doc,
+                                    item,
+                                    batch_obj,
+                                    fields_to_clear,
+                                    batch_used,
+                                    qty_remain_per_batch_obj,
+                                    b_qty,
                                 )
-                                
+
                             else:
-                                b_qty, batch_used, qty_remain_per_batch_obj = duplicated_items_allocate_qty_for_non_conversion_factor(
-                                    doc, item, batch_obj, fields_to_clear, batch_used, qty_remain_per_batch_obj, b_qty
+                                (
+                                    b_qty,
+                                    batch_used,
+                                    qty_remain_per_batch_obj,
+                                ) = duplicated_items_allocate_qty_for_non_conversion_factor(
+                                    doc,
+                                    item,
+                                    batch_obj,
+                                    fields_to_clear,
+                                    batch_used,
+                                    qty_remain_per_batch_obj,
+                                    b_qty,
                                 )
-                                
+
         else:
             for elem in duplicated_items:
                 if item_code == elem.item_code:
                     new_row = elem.as_dict()
                     for fieldname in fields_to_clear:
-                        new_row[fieldname] =  None
+                        new_row[fieldname] = None
                     doc.append("items", new_row)
 
 
-def single_items_allocate_qty_per_conversion_factor(doc, row, batch_obj, fields_to_clear, b_qty):
-    """"Allocate batch quantities to single items if conversion factor is greater to one for a particular item(s)"""
-    
+def single_items_allocate_qty_per_conversion_factor(
+    doc, row, batch_obj, fields_to_clear, b_qty
+):
+    """ "Allocate batch quantities to single items if conversion factor is greater to one for a particular item(s)"""
+
     if batch_obj.qty > 0 and b_qty < row.stock_qty:
         remainder = row.stock_qty - b_qty
         if remainder - batch_obj.qty >= 0:
             new_qty = batch_obj.qty // row.conversion_factor
             if new_qty > 0:
-                new_row = update_row_item(row, batch_obj, new_qty, fields_to_clear, row.conversion_factor)
+                new_row = update_row_item(
+                    row, batch_obj, new_qty, fields_to_clear, row.conversion_factor
+                )
                 b_qty += new_qty * row.conversion_factor
-                doc.append("items", new_row) 
+                doc.append("items", new_row)
                 return b_qty
             else:
                 return b_qty
-        
+
         elif remainder - batch_obj.qty < 0:
             new_qty = remainder // row.conversion_factor
             if new_qty > 0:
-                new_row = update_row_item(row, batch_obj, new_qty, fields_to_clear, row.conversion_factor)
+                new_row = update_row_item(
+                    row, batch_obj, new_qty, fields_to_clear, row.conversion_factor
+                )
                 b_qty += new_qty * row.conversion_factor
                 doc.append("items", new_row)
                 return b_qty
@@ -1890,23 +1994,33 @@ def single_items_allocate_qty_per_conversion_factor(doc, row, batch_obj, fields_
                 return b_qty
 
 
-def duplicated_items_allocate_qty_per_conversion_factor(doc, item, batch_obj, fields_to_clear, batch_used, qty_remain_per_batch_obj, b_qty):
+def duplicated_items_allocate_qty_per_conversion_factor(
+    doc, item, batch_obj, fields_to_clear, batch_used, qty_remain_per_batch_obj, b_qty
+):
     """Allocate quantities to duplicated items if conversion factor is greater to one for a particular item(s)"""
 
     if batch_obj.qty > 0 and b_qty < item.stock_qty:
         remainder = item.stock_qty - b_qty
         if remainder - batch_obj.qty >= 0:
             if batch_obj.batch_no == qty_remain_per_batch_obj.get("batch_no"):
-                new_qty = qty_remain_per_batch_obj.get("qty_remain_on_batch") // item.conversion_factor
+                new_qty = (
+                    qty_remain_per_batch_obj.get("qty_remain_on_batch")
+                    // item.conversion_factor
+                )
                 if new_qty > 0:
-                    new_row = update_row_item(item, batch_obj, new_qty, fields_to_clear, item.conversion_factor)
+                    new_row = update_row_item(
+                        item,
+                        batch_obj,
+                        new_qty,
+                        fields_to_clear,
+                        item.conversion_factor,
+                    )
                     b_qty += new_qty * item.conversion_factor
                     doc.append("items", new_row)
                     batch_used.append(batch_obj.batch_no)
-                    qty_remain_per_batch_obj.update({
-                        "batch_no": "",
-                        "qty_remain_on_batch": ""
-                    })
+                    qty_remain_per_batch_obj.update(
+                        {"batch_no": "", "qty_remain_on_batch": ""}
+                    )
                     return b_qty, batch_used, qty_remain_per_batch_obj
                 else:
                     return b_qty, batch_used, qty_remain_per_batch_obj
@@ -1914,37 +2028,54 @@ def duplicated_items_allocate_qty_per_conversion_factor(doc, item, batch_obj, fi
             else:
                 new_qty = batch_obj.qty // item.conversion_factor
                 if new_qty > 0:
-                    new_row = update_row_item(item, batch_obj, new_qty, fields_to_clear, item.conversion_factor)
+                    new_row = update_row_item(
+                        item,
+                        batch_obj,
+                        new_qty,
+                        fields_to_clear,
+                        item.conversion_factor,
+                    )
                     b_qty += new_qty * item.conversion_factor
                     doc.append("items", new_row)
                     batch_used.append(batch_obj.batch_no)
-                    qty_remain_per_batch_obj.update({
-                        "batch_no": "",
-                        "qty_remain_on_batch": ""
-                    })
+                    qty_remain_per_batch_obj.update(
+                        {"batch_no": "", "qty_remain_on_batch": ""}
+                    )
                     return b_qty, batch_used, qty_remain_per_batch_obj
                 else:
                     return b_qty, batch_used, qty_remain_per_batch_obj
-        
+
         elif remainder - batch_obj.qty < 0:
             if batch_obj.batch_no == qty_remain_per_batch_obj.get("batch_no"):
-                quantity = remainder if remainder <= qty_remain_per_batch_obj.get("qty_remain_on_batch") else qty_remain_per_batch_obj.get("qty_remain_on_batch")
+                quantity = (
+                    remainder
+                    if remainder <= qty_remain_per_batch_obj.get("qty_remain_on_batch")
+                    else qty_remain_per_batch_obj.get("qty_remain_on_batch")
+                )
                 new_qty = quantity // item.conversion_factor
                 if new_qty > 0:
-                    new_row = update_row_item(item, batch_obj, new_qty, fields_to_clear, item.conversion_factor)
+                    new_row = update_row_item(
+                        item,
+                        batch_obj,
+                        new_qty,
+                        fields_to_clear,
+                        item.conversion_factor,
+                    )
                     b_qty += new_qty * item.conversion_factor
                     doc.append("items", new_row)
                     if remainder > qty_remain_per_batch_obj.get("qty_remain_on_batch"):
                         batch_used.append(batch_obj.batch_no)
-                        qty_remain_per_batch_obj.update({
-                            "batch_no": "",
-                            "qty_remain_on_batch": ""
-                        })
+                        qty_remain_per_batch_obj.update(
+                            {"batch_no": "", "qty_remain_on_batch": ""}
+                        )
                     else:
-                        qty_remain_per_batch_obj.update({
-                            "batch_no": batch_obj.batch_no,
-                            "qty_remain_on_batch": batch_obj.qty - (new_qty * item.conversion_factor)
-                        })
+                        qty_remain_per_batch_obj.update(
+                            {
+                                "batch_no": batch_obj.batch_no,
+                                "qty_remain_on_batch": batch_obj.qty
+                                - (new_qty * item.conversion_factor),
+                            }
+                        )
                     return b_qty, batch_used, qty_remain_per_batch_obj
                 else:
                     return b_qty, batch_used, qty_remain_per_batch_obj
@@ -1952,102 +2083,131 @@ def duplicated_items_allocate_qty_per_conversion_factor(doc, item, batch_obj, fi
             else:
                 new_qty = remainder // item.conversion_factor
                 if new_qty > 0:
-                    new_row = update_row_item(item, batch_obj, new_qty, fields_to_clear, item.conversion_factor)
+                    new_row = update_row_item(
+                        item,
+                        batch_obj,
+                        new_qty,
+                        fields_to_clear,
+                        item.conversion_factor,
+                    )
                     b_qty += new_qty * item.conversion_factor
-                    qty_remain_per_batch_obj.update({
-                        "batch_no": batch_obj.batch_no,
-                        "qty_remain_on_batch": batch_obj.qty - (new_qty * item.conversion_factor)
-                    })
+                    qty_remain_per_batch_obj.update(
+                        {
+                            "batch_no": batch_obj.batch_no,
+                            "qty_remain_on_batch": batch_obj.qty
+                            - (new_qty * item.conversion_factor),
+                        }
+                    )
                     doc.append("items", new_row)
                     return b_qty, batch_used, qty_remain_per_batch_obj
                 else:
                     return b_qty, batch_used, qty_remain_per_batch_obj
 
-def duplicated_items_allocate_qty_for_non_conversion_factor(doc, item, batch_obj, fields_to_clear, batch_used, qty_remain_per_batch_obj, b_qty):
+
+def duplicated_items_allocate_qty_for_non_conversion_factor(
+    doc, item, batch_obj, fields_to_clear, batch_used, qty_remain_per_batch_obj, b_qty
+):
     """Allocate batch quantities to duplicated items if conversion factor is equat to 1 for a particular item(s)"""
-    
+
     if batch_obj.qty > 0 and b_qty < item.qty:
         remainder = item.qty - b_qty
         if remainder - batch_obj.qty >= 0:
             if batch_obj.batch_no == qty_remain_per_batch_obj.get("batch_no"):
-                quantity = remainder if remainder <= qty_remain_per_batch_obj.get("qty_remain_on_batch") else qty_remain_per_batch_obj.get("qty_remain_on_batch")
+                quantity = (
+                    remainder
+                    if remainder <= qty_remain_per_batch_obj.get("qty_remain_on_batch")
+                    else qty_remain_per_batch_obj.get("qty_remain_on_batch")
+                )
                 new_row = update_row_item(item, batch_obj, quantity, fields_to_clear)
                 b_qty += quantity
                 doc.append("items", new_row)
                 batch_used.append(batch_obj.batch_no)
-                qty_remain_per_batch_obj.update({
-                    "batch_no": "",
-                    "qty_remain_on_batch": ""
-                })
+                qty_remain_per_batch_obj.update(
+                    {"batch_no": "", "qty_remain_on_batch": ""}
+                )
                 return b_qty, batch_used, qty_remain_per_batch_obj
             else:
-                new_row = update_row_item(item, batch_obj, batch_obj.qty, fields_to_clear)
+                new_row = update_row_item(
+                    item, batch_obj, batch_obj.qty, fields_to_clear
+                )
                 b_qty += batch_obj.qty
                 doc.append("items", new_row)
                 batch_used.append(batch_obj.batch_no)
-                qty_remain_per_batch_obj.update({
-                    "batch_no": "",
-                    "qty_remain_on_batch": ""
-                })
+                qty_remain_per_batch_obj.update(
+                    {"batch_no": "", "qty_remain_on_batch": ""}
+                )
                 return b_qty, batch_used, qty_remain_per_batch_obj
-        
+
         elif remainder - batch_obj.qty < 0:
             if batch_obj.batch_no == qty_remain_per_batch_obj.get("batch_no"):
-                quantity = remainder if remainder <= qty_remain_per_batch_obj.get("qty_remain_on_batch") else qty_remain_per_batch_obj.get("qty_remain_on_batch")
+                quantity = (
+                    remainder
+                    if remainder <= qty_remain_per_batch_obj.get("qty_remain_on_batch")
+                    else qty_remain_per_batch_obj.get("qty_remain_on_batch")
+                )
                 new_row = update_row_item(item, batch_obj, quantity, fields_to_clear)
                 b_qty += quantity
                 doc.append("items", new_row)
                 if remainder > qty_remain_per_batch_obj.get("qty_remain_on_batch"):
                     batch_used.append(batch_obj.batch_no)
-                    qty_remain_per_batch_obj.update({
-                        "batch_no": "",
-                        "qty_remain_on_batch": ""
-                    })
+                    qty_remain_per_batch_obj.update(
+                        {"batch_no": "", "qty_remain_on_batch": ""}
+                    )
                 else:
-                    qty_remain_per_batch_obj.update({
-                        "batch_no": batch_obj.batch_no,
-                        "qty_remain_on_batch": batch_obj.qty - remainder
-                    })
+                    qty_remain_per_batch_obj.update(
+                        {
+                            "batch_no": batch_obj.batch_no,
+                            "qty_remain_on_batch": batch_obj.qty - remainder,
+                        }
+                    )
                 return b_qty, batch_used, qty_remain_per_batch_obj
 
             else:
                 new_row = update_row_item(item, batch_obj, remainder, fields_to_clear)
                 b_qty += remainder
-                qty_remain_per_batch_obj.update({
-                    "batch_no": batch_obj.batch_no,
-                    "qty_remain_on_batch": batch_obj.qty - remainder
-                })
+                qty_remain_per_batch_obj.update(
+                    {
+                        "batch_no": batch_obj.batch_no,
+                        "qty_remain_on_batch": batch_obj.qty - remainder,
+                    }
+                )
                 doc.append("items", new_row)
                 return b_qty, batch_used, qty_remain_per_batch_obj
 
 
 def update_row_item(row, batch_obj, quantity, fields_to_clear, conversion_factor=None):
     """Update and clear values to an item before inserting into child table of sales invoice"""
-    
+
     new_row = row.as_dict()
 
     for fieldname in fields_to_clear:
         new_row[fieldname] = None
 
-    new_row.update({
-        "qty": quantity,
-        "stock_qty": quantity * (conversion_factor if conversion_factor else 1),
-        "warehouse": batch_obj.warehouse,
-        "batch_no": batch_obj.batch_no
-    })
+    new_row.update(
+        {
+            "qty": quantity,
+            "stock_qty": quantity * (conversion_factor if conversion_factor else 1),
+            "warehouse": batch_obj.warehouse,
+            "batch_no": batch_obj.batch_no,
+        }
+    )
 
     return new_row
- 
+
+
 def validate_grand_total(doc, method):
     """Validate grand total of sales invoice"""
 
     if len(doc.items) > 0:
-        total_amount = sum([item.amount for item in doc.items])
+        total_amount = doc.rounded_total or doc.grand_total
 
         payment_amount = sum([payment.amount for payment in doc.payments])
 
         if payment_amount and total_amount != payment_amount:
-            frappe.throw(_(f"<h4 class='text-center' style='background-color: #D3D3D3; font-weight: bold; font-size: 14px'>\
+            frappe.throw(
+                _(
+                    f"<h4 class='text-center' style='background-color: #D3D3D3; font-weight: bold; font-size: 14px'>\
                 Total Amount for all Items: <strong>{total_amount}</strong> must be equal to Paid Amount: <strong>{payment_amount}</strong>,<br>\
-                Please check before submitting this invoice </h4>")
+                Please check before submitting this invoice </h4>"
+                )
             )
