@@ -22,6 +22,8 @@
   "column_break_10",
   "start_sle_gle_reporting",
   "payroll_overrides_section",
+  "enable_payroll_approval",
+  "column_break_sloaw",
   "enable_fixed_working_days_per_month",
   "working_days_per_month"
  ],
@@ -134,12 +136,22 @@
    "fieldname": "enable_fixed_working_days_per_month",
    "fieldtype": "Check",
    "label": "Enable Fixed Working Days per Month"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_payroll_approval",
+   "fieldtype": "Check",
+   "label": "Enable Payroll Approval"
+  },
+  {
+   "fieldname": "column_break_sloaw",
+   "fieldtype": "Column Break"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-03-08 15:32:32.630582",
+ "modified": "2023-06-22 15:25:24.421833",
  "modified_by": "Administrator",
  "module": "CSF TZ",
  "name": "CSF TZ Settings",

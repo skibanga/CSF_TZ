@@ -1,14 +1,17 @@
 frappe.ui.form.on("Payroll Entry", {
-    setup: function(frm) {
-        frm.trigger("create_update_slips_btn");
-        frm.trigger("create_print_btn");
-        frm.trigger("create_journal_entry_btn");
-        
+    setup: function (frm) {
+        frm.trigger("control_action_buttons");
     },
-    refresh:function(frm) {
-        frm.trigger("create_update_slips_btn");
-        frm.trigger("create_print_btn");
-        frm.trigger("create_journal_entry_btn");
+    refresh: function (frm) {
+        frm.trigger("control_action_buttons");
+    },
+    onload: (frm) => {
+        frm.trigger("control_action_buttons");
+    },
+    workflow_state: (frm) => {
+        if (frm.doc.has_payroll_approval == 1) {
+            frm.refresh();
+        }
     },
     create_update_slips_btn: function (frm) {
         if (frm.doc.docstatus != 1) {
@@ -28,6 +31,7 @@ frappe.ui.form.on("Payroll Entry", {
             });
         });
     },
+
     create_print_btn: function (frm) {
         if (frm.doc.docstatus != 1) {
             return
@@ -46,6 +50,7 @@ frappe.ui.form.on("Payroll Entry", {
             });
         });
     },
+
     create_journal_entry_btn: function (frm) {
         if (frm.doc.docstatus != 1 || frm.doc.salary_slips_submitted == 1) {
             return;
@@ -63,5 +68,29 @@ frappe.ui.form.on("Payroll Entry", {
                 // }
             });
         });
+    },
+        
+    control_action_buttons: (frm) => {
+        if (frm.doc.docstatus == 1 && frm.doc.has_payroll_approval == 1) {
+            if (frm.doc.workflow_state == "Salary Slips Created") {
+                frm.trigger("create_update_slips_btn");
+                $('[data-label="Submit%20Salary%20Slip"]').hide();
+            } else if (
+                frm.doc.workflow_state == "Approval Requested" ||
+                frm.doc.workflow_state == "Changes Requested" ||
+                frm.doc.workflow_state.includes("Reviewed")
+            ) {
+                frm.clear_custom_buttons();
+                frm.set_intro("");
+                frm.set_intro(__("This Payroll Entry is under approval."));
+            } else if (frm.doc.workflow_state.includes("Approved")) {
+                frm.trigger("create_print_btn");
+                frm.trigger("create_journal_entry_btn");
+            }
+        } else {
+            frm.trigger("create_update_slips_btn");
+            frm.trigger("create_print_btn");
+            frm.trigger("create_journal_entry_btn");
+        }
     },
 });
