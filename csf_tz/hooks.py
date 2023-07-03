@@ -436,6 +436,13 @@ doc_events = {
     "Custom DocPerm": {
         "validate": "csf_tz.csftz_hooks.custom_docperm.grant_dependant_access",
     },
+    "Payroll Entry": {
+        "before_insert": "csf_tz.csftz_hooks.payroll.before_insert_payroll_entry",
+        "before_update_after_submit": "csf_tz.csftz_hooks.payroll.before_update_after_submit",
+    },
+    "Salary Slip": {
+        "before_insert": "csf_tz.csftz_hooks.payroll.before_insert_salary_slip"
+    },
 }
 
 # Scheduled Tasks
