@@ -158,7 +158,7 @@ def before_update_after_submit(doc, method):
 def get_workflow_action(doc):
     if doc.workflow_state == "Approval Requested":
         return "Submit"
-    elif doc.workflow_state == "Changes Requested":
+    elif doc.workflow_state == "Change Requested":
         return "Reject"
     elif "Reviewed" in doc.workflow_state:
         return "Submit"

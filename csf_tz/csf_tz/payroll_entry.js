@@ -77,7 +77,7 @@ frappe.ui.form.on("Payroll Entry", {
                 $('[data-label="Submit%20Salary%20Slip"]').hide();
             } else if (
                 frm.doc.workflow_state == "Approval Requested" ||
-                frm.doc.workflow_state == "Changes Requested" ||
+                frm.doc.workflow_state == "Change Requested" ||
                 frm.doc.workflow_state.includes("Reviewed")
             ) {
                 frm.clear_custom_buttons();
