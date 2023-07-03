@@ -2108,8 +2108,10 @@ def update_row_item(row, batch_obj, quantity, fields_to_clear, conversion_factor
     return new_row
   
 def validate_grand_total(doc, method):
-    """Validate grand total of sales invoice"""
-
+    """Validate grand total of sales invoice if 'validate_grand_total_vs_payment_amount_on_sales_invoice' is checked in CSF TZ Settings"""
+    if not frappe.db.get_single_value('CSF TZ Settings', "validate_grand_total_vs_payment_amount_on_sales_invoice"):
+        return
+    
     if len(doc.items) > 0:
         total_amount = doc.rounded_total or doc.grand_total
 
