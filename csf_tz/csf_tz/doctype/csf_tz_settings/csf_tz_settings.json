@@ -17,13 +17,12 @@
   "allow_delete_in_sql_command",
   "allow_batch_splitting",
   "item_qty_poppup_message",
+  "validate_grand_total_vs_payment_amount_on_sales_invoice",
   "section_break_8",
   "sle_gle_reposting_start_date",
   "column_break_10",
   "start_sle_gle_reporting",
   "payroll_overrides_section",
-  "enable_payroll_approval",
-  "column_break_sloaw",
   "enable_fixed_working_days_per_month",
   "working_days_per_month"
  ],
@@ -138,20 +137,17 @@
    "label": "Enable Fixed Working Days per Month"
   },
   {
-   "default": "0",
-   "fieldname": "enable_payroll_approval",
+   "default": "1",
+   "description": "If ticked, system will compare grand total and payment amount, if they differ system will stop, submission of sales invoice",
+   "fieldname": "validate_grand_total_vs_payment_amount_on_sales_invoice",
    "fieldtype": "Check",
-   "label": "Enable Payroll Approval"
-  },
-  {
-   "fieldname": "column_break_sloaw",
-   "fieldtype": "Column Break"
+   "label": "Validate Grand Total vs Payment Amount on Sales Invoice"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-06-22 15:25:24.421833",
+ "modified": "2023-07-03 18:08:14.403126",
  "modified_by": "Administrator",
  "module": "CSF TZ",
  "name": "CSF TZ Settings",
