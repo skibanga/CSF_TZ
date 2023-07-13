@@ -7,6 +7,18 @@ from frappe.utils.background_jobs import enqueue
 from frappe.utils.pdf import get_pdf, cleanup
 from PyPDF2 import PdfFileWriter
 from csf_tz import console
+from frappe.model.workflow import apply_workflow
+from frappe.utils import cint
+
+def before_insert_payroll_entry(doc, method):
+    enable_payroll_approval = frappe.db.get_single_value("CSF TZ Settings", "enable_payroll_approval")
+    if enable_payroll_approval:
+        doc.has_payroll_approval = 1
+
+def before_insert_salary_slip(doc, method):
+    enable_payroll_approval = frappe.db.get_single_value("CSF TZ Settings", "enable_payroll_approval")
+    if enable_payroll_approval:
+        doc.has_payroll_approval = 1
 
 
 @frappe.whitelist()
@@ -124,3 +136,53 @@ def create_journal_entry(payroll_entry):
         si_msgprint = _("Journal Entry Created <a href='{0}'>{1}</a>").format(jv_url,jv_name)
         frappe.msgprint(si_msgprint)
         return "True"
+
+def before_update_after_submit(doc, method):
+    # submit salary slips directly if payroll entry is approved
+    if "Approved" in doc.workflow_state:
+        doc.submit_salary_slips()
+        return
+
+    salary_slips = frappe.get_all("Salary Slip", filters={"payroll_entry": doc.name}, pluck="name")
+    if len(salary_slips) == 0:
+        return
+    
+    params = {"salary_slips": salary_slips, "action": get_workflow_action(doc)}
+
+    enqueue(
+        method=enqueue_apply_workflow_for_salary_slips,
+        queue='short', timeout=100000, is_async=True, 
+        job_name="apply_workflow_for_salary_slips", kwargs=params
+    )
+
+def get_workflow_action(doc):
+    if doc.workflow_state == "Approval Requested":
+        return "Submit"
+    elif doc.workflow_state == "Change Requested":
+        return "Reject"
+    elif "Reviewed" in doc.workflow_state:
+        return "Submit"
+    
+def enqueue_apply_workflow_for_salary_slips(kwargs):
+    for slip in kwargs.get("salary_slips"):
+        slip_doc = frappe.get_doc("Salary Slip", slip)
+
+        if kwargs.get("action") == "Reject" and  slip_doc.workflow_state == "Open":
+            continue
+        elif kwargs.get("action") == "Submit" and  slip_doc.workflow_state == "Ongoing Approval":
+            continue
+        elif kwargs.get("action") == "Submit" and  slip_doc.workflow_state == "Approved":
+            continue
+        elif kwargs.get("action") == "Cancel" and  slip_doc.workflow_state == "Cancelled":
+            continue
+        elif not kwargs.get("action"):
+            continue
+        
+        try:
+            apply_workflow(slip_doc, kwargs.get("action"))
+
+        except:
+            traceback = frappe.get_traceback()
+            title = _(f"Error for Salary Slip: <b>{slip_doc.name}</b>")
+            frappe.log_error(traceback, title)
+            continue

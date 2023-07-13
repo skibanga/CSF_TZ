@@ -17,6 +17,7 @@
   "allow_delete_in_sql_command",
   "allow_batch_splitting",
   "item_qty_poppup_message",
+  "validate_grand_total_vs_payment_amount_on_sales_invoice",
   "section_break_8",
   "sle_gle_reposting_start_date",
   "column_break_10",
@@ -146,6 +147,13 @@
   {
    "fieldname": "column_break_ctscx",
    "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "description": "If ticked, system will compare grand total and payment amount, if they differ system will stop, submission of sales invoice",
+   "fieldname": "validate_grand_total_vs_payment_amount_on_sales_invoice",
+   "fieldtype": "Check",
+   "label": "Validate Grand Total vs Payment Amount on Sales Invoice"
   }
  ],
  "index_web_pages_for_search": 1,

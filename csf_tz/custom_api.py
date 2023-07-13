@@ -1769,13 +1769,16 @@ def batch_splitting(doc, method):
     this works only if is_return = 0, update_stock = 1 and allow batch splitting is ticked on CSF TZ Settings
     """
     if doc.is_return == 1:
-        return 
-
-    if not doc.update_stock:
         return
-       
+
+    if doc.update_stock == 0:
+        return
+
     if not frappe.db.get_single_value('CSF TZ Settings', "allow_batch_splitting"):
         return
+
+    if not doc.set_warehouse and doc.pos_profile:
+        doc.set_warehouse = frappe.db.get_value("POS Profile", doc.pos_profile, "warehouse")
 
     if not doc.set_warehouse:
         frappe.throw(_("<h4>Please set source warehouse first</h4>"))
@@ -2103,4 +2106,19 @@ def update_row_item(row, batch_obj, quantity, fields_to_clear, conversion_factor
     })
 
     return new_row
- 
+  
+def validate_grand_total(doc, method):
+    """Validate grand total of sales invoice if 'validate_grand_total_vs_payment_amount_on_sales_invoice' is checked in CSF TZ Settings"""
+    if not frappe.db.get_single_value('CSF TZ Settings', "validate_grand_total_vs_payment_amount_on_sales_invoice"):
+        return
+    
+    if len(doc.items) > 0:
+        total_amount = doc.rounded_total or doc.grand_total
+
+        payment_amount = sum([payment.amount for payment in doc.payments])
+    
+        if payment_amount and total_amount != payment_amount:
+            frappe.throw(_(f"<h4 class='text-center' style='background-color: #D3D3D3; font-weight: bold; font-size: 14px'>\
+                Total Amount for all Items: <strong>{total_amount}</strong> must be equal to Paid Amount: <strong>{payment_amount}</strong>,<br>\
+                Please check before submitting this invoice </h4>")
+            )
