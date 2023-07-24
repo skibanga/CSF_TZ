@@ -20,6 +20,41 @@ def before_insert_salary_slip(doc, method):
     if enable_payroll_approval:
         doc.has_payroll_approval = 1
 
+def before_cancel_payroll_entry(doc, method):
+    if not doc.has_payroll_approval:
+        return
+    
+    doc.ignore_linked_doctypes = "GL Entry"
+    salary_slips = frappe.get_all("Salary Slip", filters={"payroll_entry": doc.name}, pluck="name")
+    
+    journal_entry = None
+    if len(salary_slips) > 0:
+        for slip in salary_slips:
+            try:
+                slip_doc = frappe.get_doc("Salary Slip", slip)
+                if not journal_entry:
+                    journal_entry = slip_doc.journal_entry
+
+                if slip_doc.docstatus == 1:
+                    slip_doc.cancel()
+                slip_doc.delete()
+            except:
+                traceback = frappe.get_traceback()
+                title = _(f"Error for Salary Slip: <b>{slip_doc.name}</b>")
+                frappe.log_error(traceback, title)
+                continue
+    
+    if journal_entry:
+        try:
+                jv_doc = frappe.get_doc("Journal Entry", journal_entry)
+                if jv_doc.docstatus == 1:
+                    jv_doc.cancel()
+                jv_doc.delete()
+        except:
+            traceback = frappe.get_traceback()
+            title = _(f"Error for Journal Entry: <b>{jv_doc.name}</b>")
+            frappe.log_error(traceback, title)
+            return
 
 @frappe.whitelist()
 def update_slips(payroll_entry):
@@ -138,6 +173,9 @@ def create_journal_entry(payroll_entry):
         return "True"
 
 def before_update_after_submit(doc, method):
+    if not doc.has_payroll_approval:
+        return
+    
     # submit salary slips directly if payroll entry is approved
     if "Approved" in doc.workflow_state:
         doc.submit_salary_slips()
