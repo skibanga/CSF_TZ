@@ -26,7 +26,9 @@
   "enable_payroll_approval",
   "column_break_ctscx",
   "enable_fixed_working_days_per_month",
-  "working_days_per_month"
+  "working_days_per_month",
+  "hr_settings_section",
+  "enable_overtime_calculation"
  ],
  "fields": [
   {
@@ -154,12 +156,23 @@
    "fieldname": "validate_grand_total_vs_payment_amount_on_sales_invoice",
    "fieldtype": "Check",
    "label": "Validate Grand Total vs Payment Amount on Sales Invoice"
+  },
+  {
+   "fieldname": "hr_settings_section",
+   "fieldtype": "Section Break",
+   "label": "HR Settings "
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_overtime_calculation",
+   "fieldtype": "Check",
+   "label": "Enable Overtime Calculation"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-07-13 13:05:22.747720",
+ "modified": "2023-08-11 11:27:00.837668",
  "modified_by": "Administrator",
  "module": "CSF TZ",
  "name": "CSF TZ Settings",
