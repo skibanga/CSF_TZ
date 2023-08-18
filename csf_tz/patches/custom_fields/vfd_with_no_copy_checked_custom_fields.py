@@ -14,7 +14,6 @@ def execute():
                 "fieldname": "vfd_cust_id",
                 "fieldtype": "Data",
                 "module_def": "VFD Providers",
-                "is_system_generated": 1,
             },
             {
                 "reqd": 1,
@@ -26,7 +25,6 @@ def execute():
                 "fieldtype": "Select",
                 "options": "\n1- TIN\n2- Passport\n3- Driving License\n4- Voter ID\n5- Aadhaar\n6- Other",
                 "module_def": "VFD Providers",
-                "is_system_generated": 1,
             },
             {
                 "label": "VFD Customer ID",
@@ -52,7 +50,6 @@ def execute():
                 "fieldname": "vfd_details",
                 "fieldtype": "Section Break",
                 "module_def": "VFD Providers",
-                "is_system_generated": 1,
             },
         ],
         "Sales Invoice": [
@@ -69,7 +66,6 @@ def execute():
             {
                 "fetch_from": "customer.vfd_custidtype",
                 "no_copy": 1,
-                "_liked_by": "None",
                 "label": "VFD Cust ID Type",
                 "insert_after": "vfd_serial",
                 "translatable": 1,
@@ -87,7 +83,6 @@ def execute():
             },
             {
                 "no_copy": 1,
-                "_liked_by": "None",
                 "read_only": 1,
                 "label": "VFD DC",
                 "insert_after": "update_status",
@@ -99,7 +94,6 @@ def execute():
                 "collapsible": 1,
                 "no_copy": 1,
                 "depends_on": 'eval: !in_list(frappe.user_roles, "Healthcare Receptionist")',
-                "_liked_by": "None",
                 "label": "VFD Details",
                 "insert_after": "authotp",
                 "fieldname": "vfd_details",
@@ -206,7 +200,6 @@ def execute():
                 "fieldname": "vfd_tax_code",
                 "fieldtype": "Data",
                 "module_def": "VFD Providers",
-                "is_system_generated": 1,
             },
             {
                 "label": "VFD TAXCODE",
@@ -227,7 +220,6 @@ def execute():
                 "fieldname": "vfd_payment_type",
                 "fieldtype": "Data",
                 "module_def": "VFD Providers",
-                "is_system_generated": 1,
             },
             {
                 "label": "VFD PMTTYPE",
