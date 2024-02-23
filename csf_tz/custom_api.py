@@ -8,16 +8,7 @@ import traceback
 import pyqrcode
 import io
 import base64
-from frappe.utils import (
-    flt,
-    cint,
-    getdate,
-    get_datetime,
-    nowdate,
-    nowtime,
-    add_days,
-    unique,
-)
+from frappe.utils import flt, cint, getdate, get_datetime, nowdate, nowtime, add_days, unique
 from frappe.model.mapper import get_mapped_doc
 from frappe.desk.form.linked_with import get_linked_docs, get_linked_doctypes
 from erpnext.stock.utils import get_stock_balance, get_latest_stock_qty
@@ -874,9 +865,7 @@ def validate_item_remaining_qty(
 
         item_remaining_qty = item_balance - qty_to_reduce - pending_si
         if item_remaining_qty < 0:
-            if not frappe.db.get_single_value(
-                "CSF TZ Settings", "item_qty_poppup_message"
-            ):
+            if not frappe.db.get_single_value("CSF TZ Settings", "item_qty_poppup_message"):
                 frappe.msgprint(
                     _(
                         "Item Balance: '{2}'<br>Pending Sales Order: '{3}'<br>Pending Direct Sales Invoice: {5}<br>Current request is {4}<br><b>Results into balance Qty for '{0}' to '{1}'</b>".format(
@@ -887,8 +876,7 @@ def validate_item_remaining_qty(
                             float(stock_qty),
                             pending_si,
                         )
-                    ),
-                    alert=True,
+                    ), alert=True
                 )
 
             else:
@@ -1426,9 +1414,9 @@ def make_withholding_tax_gl_entries_for_purchase(doc, method):
         jl_rows.append(debit_row)
         credit_row = dict(
             account=withholding_payable_account,
-            party_type=(
-                "Supplier" if withholding_payable_account_type == "Payable" else ""
-            ),
+            party_type="Supplier"
+            if withholding_payable_account_type == "Payable"
+            else "",
             party=doc.supplier if withholding_payable_account_type == "Payable" else "",
             credit_in_account_currency=wtax_base_amount,
             cost_center=item.cost_center,
@@ -1456,9 +1444,9 @@ def make_withholding_tax_gl_entries_for_purchase(doc, method):
                 posting_date=doc.posting_date,
                 accounts=jl_rows,
                 company=doc.company,
-                multi_currency=(
-                    0 if doc.party_account_currency == default_currency else 1
-                ),
+                multi_currency=0
+                if doc.party_account_currency == default_currency
+                else 1,
                 user_remark=user_remark,
             )
         )
@@ -1654,11 +1642,9 @@ def make_withholding_tax_gl_entries_for_sales(doc, method):
             party_type="customer",
             party=doc.customer,
             credit_in_account_currency=debtor_amount,
-            account_curremcy=(
-                default_currency
-                if doc.party_account_currency == default_currency
-                else doc.currency
-            ),
+            account_curremcy=default_currency
+            if doc.party_account_currency == default_currency
+            else doc.currency,
             exchange_rate=exchange_rate,
             cost_center=item.cost_center,
             reference_type="Sales Invoice",
@@ -1668,16 +1654,12 @@ def make_withholding_tax_gl_entries_for_sales(doc, method):
 
         debit_row = dict(
             account=withholding_receivable_account,
-            party_type=(
-                "customer"
-                if withholding_receivable_account_type == "Receivable"
-                else ""
-            ),
-            party=(
-                doc.customer
-                if withholding_receivable_account_type == "Receivable"
-                else ""
-            ),
+            party_type="customer"
+            if withholding_receivable_account_type == "Receivable"
+            else "",
+            party=doc.customer
+            if withholding_receivable_account_type == "Receivable"
+            else "",
             debit_in_account_currency=wtax_base_amount,
             cost_center=item.cost_center,
             account_curremcy=default_currency,
@@ -1705,9 +1687,9 @@ def make_withholding_tax_gl_entries_for_sales(doc, method):
                 posting_date=doc.posting_date,
                 accounts=jl_rows,
                 company=doc.company,
-                multi_currency=(
-                    0 if doc.party_account_currency == default_currency else 1
-                ),
+                multi_currency=0
+                if doc.party_account_currency == default_currency
+                else 1,
                 user_remark=user_remark,
             )
         )
@@ -1756,17 +1738,13 @@ def validate_payroll_entry_field(payroll_entry):
 def auto_close_dn():
     """
     Mark delivery note as closed per customer, depending on the days specified on customer
-
+    
     This routine will run every day 3:30am at night
     """
 
     dn_list = []
 
-    customer_details = frappe.get_all(
-        "Customer",
-        filters={"csf_tz_is_auto_close_dn": 1},
-        fields=["name", "csf_tz_close_dn_after"],
-    )
+    customer_details = frappe.get_all("Customer", filters={"csf_tz_is_auto_close_dn": 1}, fields=["name", "csf_tz_close_dn_after"])
 
     if not customer_details:
         return
@@ -1776,14 +1754,9 @@ def auto_close_dn():
             "docstatus": 1,
             "customer": customer.name,
             "status": ["!=", "Closed"],
-            "posting_date": [
-                "<",
-                add_days(nowdate(), days=(-1 * customer.csf_tz_close_dn_after)),
-            ],
+            "posting_date": ["<", add_days(nowdate(), days=(-1 * customer.csf_tz_close_dn_after))],
         }
-        dn_list += frappe.get_all(
-            "Delivery Note", filters=filters, fields=["name"], pluck="name"
-        )
+        dn_list += frappe.get_all("Delivery Note", filters=filters, fields=["name"], pluck="name")
 
     for dn in dn_list:
         frappe.db.set_value("Delivery Note", dn, "status", "Closed")
@@ -1801,33 +1774,20 @@ def batch_splitting(doc, method):
     if doc.update_stock == 0:
         return
 
-    if not frappe.db.get_single_value("CSF TZ Settings", "allow_batch_splitting"):
+    if not frappe.db.get_single_value('CSF TZ Settings', "allow_batch_splitting"):
         return
 
     if not doc.set_warehouse and doc.pos_profile:
-        doc.set_warehouse = frappe.db.get_value(
-            "POS Profile", doc.pos_profile, "warehouse"
-        )
+        doc.set_warehouse = frappe.db.get_value("POS Profile", doc.pos_profile, "warehouse")
 
     if not doc.set_warehouse:
         frappe.throw(_("<h4>Please set source warehouse first</h4>"))
-
+        
     warehouse = doc.set_warehouse
 
     source_doc = doc
 
-    fields_to_clear = [
-        "name",
-        "owner",
-        "creation",
-        "modified",
-        "modified_by",
-        "docstatus",
-        "parentfield",
-        "parenttype",
-        "parent",
-        "doctype",
-    ]
+    fields_to_clear = ["name", "owner", "creation", "modified", "modified_by", "docstatus", "parentfield", "parenttype", "parent", "doctype"]
 
     single_entries, dupl_entries = get_item_duplicates(source_doc)
     doc.items = []
@@ -1841,6 +1801,7 @@ def batch_splitting(doc, method):
     doc.set_warehouse = warehouse
 
 
+
 def get_item_duplicates(source_doc):
     single_items = []
     duplicated_items = []
@@ -1850,27 +1811,20 @@ def get_item_duplicates(source_doc):
             duplicated_items.append(item)
         else:
             single_items.append(item)
-
+    
     return single_items, duplicated_items
 
 
 def get_batch_per_item(item_code, posting_date, warehouse):
-    """ "fetch batch details for item code and warehouse"""
+    """"fetch batch details for item code and warehouse"""
 
     conditions = ""
     if warehouse:
-        conditions = (
-            "sle.item_code = '%s' and sle.is_cancelled = 0 and sle.batch_no != '' and sle.warehouse = '%s' "
-            % (item_code, warehouse)
-        )
+        conditions = "sle.item_code = '%s' and sle.is_cancelled = 0 and sle.batch_no != '' and sle.warehouse = '%s' "%(item_code, warehouse)
     else:
-        conditions = (
-            "sle.item_code = '%s' and sle.is_cancelled = 0 and sle.batch_no != '' "
-            % (item_code)
-        )
-
-    batch_records = frappe.db.sql(
-        """
+        conditions = "sle.item_code = '%s' and sle.is_cancelled = 0 and sle.batch_no != '' "%(item_code)
+    
+    batch_records = frappe.db.sql("""
         select sle.batch_no, sle.warehouse, sum(sle.actual_qty) as qty, ba.stock_uom, ba.expiry_date
         from `tabStock Ledger Entry` sle 
         inner join `tabBatch` ba on sle.batch_no = ba.batch_id
@@ -1878,14 +1832,10 @@ def get_batch_per_item(item_code, posting_date, warehouse):
         AND ba.expiry_date >= %s
         group by sle.batch_no, sle.warehouse
         order by ba.expiry_date
-        """.format(
-            conditions=conditions
-        ),
-        posting_date,
-        as_dict=True,
+        """.format(conditions=conditions), posting_date, as_dict=True
     )
     return batch_records
-
+    
 
 def allocate_batches_for_single_items(doc, items, warehouse, fields_to_clear):
     """allocate batch quantities of single items before inserting of sales invoice"""
@@ -1906,60 +1856,46 @@ def allocate_batches_for_single_items(doc, items, warehouse, fields_to_clear):
                     continue
 
                 if row.conversion_factor > 1:
-                    b_qty = cint(
-                        single_items_allocate_qty_per_conversion_factor(
-                            doc, row, batch_obj, fields_to_clear, b_qty
-                        )
-                    )
-
+                    b_qty = cint(single_items_allocate_qty_per_conversion_factor(
+                        doc, row, batch_obj, fields_to_clear, b_qty
+                    ))
+                
                 else:
                     if batch_obj.qty > 0 and b_qty < row.qty:
                         remainder = row.qty - b_qty
                         if remainder - batch_obj.qty >= 0:
-                            new_row = update_row_item(
-                                row, batch_obj, batch_obj.qty, fields_to_clear
-                            )
+                            new_row = update_row_item(row, batch_obj, batch_obj.qty, fields_to_clear)
                             b_qty = b_qty + batch_obj.qty
-
+                        
                             doc.append("items", new_row)
-
+                        
                         elif remainder - batch_obj.qty < 0:
-                            new_row = update_row_item(
-                                row, batch_obj, remainder, fields_to_clear
-                            )
+                            new_row = update_row_item(row, batch_obj, remainder, fields_to_clear)
                             b_qty = b_qty + remainder
-
+                        
                             doc.append("items", new_row)
-
+            
             if b_qty < row.qty:
-                frappe.throw(
-                    "Qty: {0} available for item: {1} on warehouse: {2} is not enough to complete requested Qty: {3}<br>\
+                frappe.throw("Qty: {0} available for item: {1} on warehouse: {2} is not enough to complete requested Qty: {3}<br>\
                 Please update sales order: {4} to match the Qty available on stock".format(
-                        frappe.bold(b_qty),
-                        frappe.bold(row.item_code),
-                        frappe.bold(warehouse),
-                        frappe.bold(row.qty),
-                        frappe.bold(row.parent),
-                    )
-                )
-
+                    frappe.bold(b_qty), frappe.bold(row.item_code), frappe.bold(warehouse), frappe.bold(row.qty), frappe.bold(row.parent)
+                ))
+        
         else:
             new_row = row.as_dict()
             for fieldname in fields_to_clear:
-                new_row[fieldname] = None
+                new_row[fieldname] =  None
             doc.append("items", new_row)
+    
 
-
-def allocate_batch_for_duplicate_items(
-    doc, duplicated_items, warehouse, fields_to_clear
-):
+def allocate_batch_for_duplicate_items(doc, duplicated_items, warehouse, fields_to_clear):
     """Allocate batch quantities to duplicated items on before inserting sales invoice"""
 
     if not duplicated_items:
         return
-
-    unique_names = unique([d.item_code for d in duplicated_items])
-
+    
+    unique_names = unique([d.item_code for d in duplicated_items ])
+    
     for item_code in unique_names:
         batches = get_batch_per_item(item_code, doc.posting_date, warehouse)
 
@@ -1979,65 +1915,43 @@ def allocate_batch_for_duplicate_items(
 
                         if batch_obj.batch_no not in batch_used:
                             if item.conversion_factor > 1:
-                                b_qty, batch_used, qty_remain_per_batch_obj = (
-                                    duplicated_items_allocate_qty_per_conversion_factor(
-                                        doc,
-                                        item,
-                                        batch_obj,
-                                        fields_to_clear,
-                                        batch_used,
-                                        qty_remain_per_batch_obj,
-                                        b_qty,
-                                    )
+                                b_qty, batch_used, qty_remain_per_batch_obj = duplicated_items_allocate_qty_per_conversion_factor(
+                                    doc, item, batch_obj, fields_to_clear, batch_used, qty_remain_per_batch_obj, b_qty
                                 )
-
+                                
                             else:
-                                b_qty, batch_used, qty_remain_per_batch_obj = (
-                                    duplicated_items_allocate_qty_for_non_conversion_factor(
-                                        doc,
-                                        item,
-                                        batch_obj,
-                                        fields_to_clear,
-                                        batch_used,
-                                        qty_remain_per_batch_obj,
-                                        b_qty,
-                                    )
+                                b_qty, batch_used, qty_remain_per_batch_obj = duplicated_items_allocate_qty_for_non_conversion_factor(
+                                    doc, item, batch_obj, fields_to_clear, batch_used, qty_remain_per_batch_obj, b_qty
                                 )
-
+                                
         else:
             for elem in duplicated_items:
                 if item_code == elem.item_code:
                     new_row = elem.as_dict()
                     for fieldname in fields_to_clear:
-                        new_row[fieldname] = None
+                        new_row[fieldname] =  None
                     doc.append("items", new_row)
 
 
-def single_items_allocate_qty_per_conversion_factor(
-    doc, row, batch_obj, fields_to_clear, b_qty
-):
-    """ "Allocate batch quantities to single items if conversion factor is greater to one for a particular item(s)"""
-
+def single_items_allocate_qty_per_conversion_factor(doc, row, batch_obj, fields_to_clear, b_qty):
+    """"Allocate batch quantities to single items if conversion factor is greater to one for a particular item(s)"""
+    
     if batch_obj.qty > 0 and b_qty < row.stock_qty:
         remainder = row.stock_qty - b_qty
         if remainder - batch_obj.qty >= 0:
             new_qty = batch_obj.qty // row.conversion_factor
             if new_qty > 0:
-                new_row = update_row_item(
-                    row, batch_obj, new_qty, fields_to_clear, row.conversion_factor
-                )
+                new_row = update_row_item(row, batch_obj, new_qty, fields_to_clear, row.conversion_factor)
                 b_qty += new_qty * row.conversion_factor
-                doc.append("items", new_row)
+                doc.append("items", new_row) 
                 return b_qty
             else:
                 return b_qty
-
+        
         elif remainder - batch_obj.qty < 0:
             new_qty = remainder // row.conversion_factor
             if new_qty > 0:
-                new_row = update_row_item(
-                    row, batch_obj, new_qty, fields_to_clear, row.conversion_factor
-                )
+                new_row = update_row_item(row, batch_obj, new_qty, fields_to_clear, row.conversion_factor)
                 b_qty += new_qty * row.conversion_factor
                 doc.append("items", new_row)
                 return b_qty
@@ -2045,33 +1959,23 @@ def single_items_allocate_qty_per_conversion_factor(
                 return b_qty
 
 
-def duplicated_items_allocate_qty_per_conversion_factor(
-    doc, item, batch_obj, fields_to_clear, batch_used, qty_remain_per_batch_obj, b_qty
-):
+def duplicated_items_allocate_qty_per_conversion_factor(doc, item, batch_obj, fields_to_clear, batch_used, qty_remain_per_batch_obj, b_qty):
     """Allocate quantities to duplicated items if conversion factor is greater to one for a particular item(s)"""
 
     if batch_obj.qty > 0 and b_qty < item.stock_qty:
         remainder = item.stock_qty - b_qty
         if remainder - batch_obj.qty >= 0:
             if batch_obj.batch_no == qty_remain_per_batch_obj.get("batch_no"):
-                new_qty = (
-                    qty_remain_per_batch_obj.get("qty_remain_on_batch")
-                    // item.conversion_factor
-                )
+                new_qty = qty_remain_per_batch_obj.get("qty_remain_on_batch") // item.conversion_factor
                 if new_qty > 0:
-                    new_row = update_row_item(
-                        item,
-                        batch_obj,
-                        new_qty,
-                        fields_to_clear,
-                        item.conversion_factor,
-                    )
+                    new_row = update_row_item(item, batch_obj, new_qty, fields_to_clear, item.conversion_factor)
                     b_qty += new_qty * item.conversion_factor
                     doc.append("items", new_row)
                     batch_used.append(batch_obj.batch_no)
-                    qty_remain_per_batch_obj.update(
-                        {"batch_no": "", "qty_remain_on_batch": ""}
-                    )
+                    qty_remain_per_batch_obj.update({
+                        "batch_no": "",
+                        "qty_remain_on_batch": ""
+                    })
                     return b_qty, batch_used, qty_remain_per_batch_obj
                 else:
                     return b_qty, batch_used, qty_remain_per_batch_obj
@@ -2079,54 +1983,37 @@ def duplicated_items_allocate_qty_per_conversion_factor(
             else:
                 new_qty = batch_obj.qty // item.conversion_factor
                 if new_qty > 0:
-                    new_row = update_row_item(
-                        item,
-                        batch_obj,
-                        new_qty,
-                        fields_to_clear,
-                        item.conversion_factor,
-                    )
+                    new_row = update_row_item(item, batch_obj, new_qty, fields_to_clear, item.conversion_factor)
                     b_qty += new_qty * item.conversion_factor
                     doc.append("items", new_row)
                     batch_used.append(batch_obj.batch_no)
-                    qty_remain_per_batch_obj.update(
-                        {"batch_no": "", "qty_remain_on_batch": ""}
-                    )
+                    qty_remain_per_batch_obj.update({
+                        "batch_no": "",
+                        "qty_remain_on_batch": ""
+                    })
                     return b_qty, batch_used, qty_remain_per_batch_obj
                 else:
                     return b_qty, batch_used, qty_remain_per_batch_obj
-
+        
         elif remainder - batch_obj.qty < 0:
             if batch_obj.batch_no == qty_remain_per_batch_obj.get("batch_no"):
-                quantity = (
-                    remainder
-                    if remainder <= qty_remain_per_batch_obj.get("qty_remain_on_batch")
-                    else qty_remain_per_batch_obj.get("qty_remain_on_batch")
-                )
+                quantity = remainder if remainder <= qty_remain_per_batch_obj.get("qty_remain_on_batch") else qty_remain_per_batch_obj.get("qty_remain_on_batch")
                 new_qty = quantity // item.conversion_factor
                 if new_qty > 0:
-                    new_row = update_row_item(
-                        item,
-                        batch_obj,
-                        new_qty,
-                        fields_to_clear,
-                        item.conversion_factor,
-                    )
+                    new_row = update_row_item(item, batch_obj, new_qty, fields_to_clear, item.conversion_factor)
                     b_qty += new_qty * item.conversion_factor
                     doc.append("items", new_row)
                     if remainder > qty_remain_per_batch_obj.get("qty_remain_on_batch"):
                         batch_used.append(batch_obj.batch_no)
-                        qty_remain_per_batch_obj.update(
-                            {"batch_no": "", "qty_remain_on_batch": ""}
-                        )
+                        qty_remain_per_batch_obj.update({
+                            "batch_no": "",
+                            "qty_remain_on_batch": ""
+                        })
                     else:
-                        qty_remain_per_batch_obj.update(
-                            {
-                                "batch_no": batch_obj.batch_no,
-                                "qty_remain_on_batch": batch_obj.qty
-                                - (new_qty * item.conversion_factor),
-                            }
-                        )
+                        qty_remain_per_batch_obj.update({
+                            "batch_no": batch_obj.batch_no,
+                            "qty_remain_on_batch": batch_obj.qty - (new_qty * item.conversion_factor)
+                        })
                     return b_qty, batch_used, qty_remain_per_batch_obj
                 else:
                     return b_qty, batch_used, qty_remain_per_batch_obj
@@ -2134,215 +2021,136 @@ def duplicated_items_allocate_qty_per_conversion_factor(
             else:
                 new_qty = remainder // item.conversion_factor
                 if new_qty > 0:
-                    new_row = update_row_item(
-                        item,
-                        batch_obj,
-                        new_qty,
-                        fields_to_clear,
-                        item.conversion_factor,
-                    )
+                    new_row = update_row_item(item, batch_obj, new_qty, fields_to_clear, item.conversion_factor)
                     b_qty += new_qty * item.conversion_factor
-                    qty_remain_per_batch_obj.update(
-                        {
-                            "batch_no": batch_obj.batch_no,
-                            "qty_remain_on_batch": batch_obj.qty
-                            - (new_qty * item.conversion_factor),
-                        }
-                    )
+                    qty_remain_per_batch_obj.update({
+                        "batch_no": batch_obj.batch_no,
+                        "qty_remain_on_batch": batch_obj.qty - (new_qty * item.conversion_factor)
+                    })
                     doc.append("items", new_row)
                     return b_qty, batch_used, qty_remain_per_batch_obj
                 else:
                     return b_qty, batch_used, qty_remain_per_batch_obj
 
-
-def duplicated_items_allocate_qty_for_non_conversion_factor(
-    doc, item, batch_obj, fields_to_clear, batch_used, qty_remain_per_batch_obj, b_qty
-):
+def duplicated_items_allocate_qty_for_non_conversion_factor(doc, item, batch_obj, fields_to_clear, batch_used, qty_remain_per_batch_obj, b_qty):
     """Allocate batch quantities to duplicated items if conversion factor is equat to 1 for a particular item(s)"""
-
+    
     if batch_obj.qty > 0 and b_qty < item.qty:
         remainder = item.qty - b_qty
         if remainder - batch_obj.qty >= 0:
             if batch_obj.batch_no == qty_remain_per_batch_obj.get("batch_no"):
-                quantity = (
-                    remainder
-                    if remainder <= qty_remain_per_batch_obj.get("qty_remain_on_batch")
-                    else qty_remain_per_batch_obj.get("qty_remain_on_batch")
-                )
+                quantity = remainder if remainder <= qty_remain_per_batch_obj.get("qty_remain_on_batch") else qty_remain_per_batch_obj.get("qty_remain_on_batch")
                 new_row = update_row_item(item, batch_obj, quantity, fields_to_clear)
                 b_qty += quantity
                 doc.append("items", new_row)
                 batch_used.append(batch_obj.batch_no)
-                qty_remain_per_batch_obj.update(
-                    {"batch_no": "", "qty_remain_on_batch": ""}
-                )
+                qty_remain_per_batch_obj.update({
+                    "batch_no": "",
+                    "qty_remain_on_batch": ""
+                })
                 return b_qty, batch_used, qty_remain_per_batch_obj
             else:
-                new_row = update_row_item(
-                    item, batch_obj, batch_obj.qty, fields_to_clear
-                )
+                new_row = update_row_item(item, batch_obj, batch_obj.qty, fields_to_clear)
                 b_qty += batch_obj.qty
                 doc.append("items", new_row)
                 batch_used.append(batch_obj.batch_no)
-                qty_remain_per_batch_obj.update(
-                    {"batch_no": "", "qty_remain_on_batch": ""}
-                )
+                qty_remain_per_batch_obj.update({
+                    "batch_no": "",
+                    "qty_remain_on_batch": ""
+                })
                 return b_qty, batch_used, qty_remain_per_batch_obj
-
+        
         elif remainder - batch_obj.qty < 0:
             if batch_obj.batch_no == qty_remain_per_batch_obj.get("batch_no"):
-                quantity = (
-                    remainder
-                    if remainder <= qty_remain_per_batch_obj.get("qty_remain_on_batch")
-                    else qty_remain_per_batch_obj.get("qty_remain_on_batch")
-                )
+                quantity = remainder if remainder <= qty_remain_per_batch_obj.get("qty_remain_on_batch") else qty_remain_per_batch_obj.get("qty_remain_on_batch")
                 new_row = update_row_item(item, batch_obj, quantity, fields_to_clear)
                 b_qty += quantity
                 doc.append("items", new_row)
                 if remainder > qty_remain_per_batch_obj.get("qty_remain_on_batch"):
                     batch_used.append(batch_obj.batch_no)
-                    qty_remain_per_batch_obj.update(
-                        {"batch_no": "", "qty_remain_on_batch": ""}
-                    )
+                    qty_remain_per_batch_obj.update({
+                        "batch_no": "",
+                        "qty_remain_on_batch": ""
+                    })
                 else:
-                    qty_remain_per_batch_obj.update(
-                        {
-                            "batch_no": batch_obj.batch_no,
-                            "qty_remain_on_batch": batch_obj.qty - remainder,
-                        }
-                    )
+                    qty_remain_per_batch_obj.update({
+                        "batch_no": batch_obj.batch_no,
+                        "qty_remain_on_batch": batch_obj.qty - remainder
+                    })
                 return b_qty, batch_used, qty_remain_per_batch_obj
 
             else:
                 new_row = update_row_item(item, batch_obj, remainder, fields_to_clear)
                 b_qty += remainder
-                qty_remain_per_batch_obj.update(
-                    {
-                        "batch_no": batch_obj.batch_no,
-                        "qty_remain_on_batch": batch_obj.qty - remainder,
-                    }
-                )
+                qty_remain_per_batch_obj.update({
+                    "batch_no": batch_obj.batch_no,
+                    "qty_remain_on_batch": batch_obj.qty - remainder
+                })
                 doc.append("items", new_row)
                 return b_qty, batch_used, qty_remain_per_batch_obj
 
 
 def update_row_item(row, batch_obj, quantity, fields_to_clear, conversion_factor=None):
     """Update and clear values to an item before inserting into child table of sales invoice"""
-
+    
     new_row = row.as_dict()
 
     for fieldname in fields_to_clear:
         new_row[fieldname] = None
 
-    new_row.update(
-        {
-            "qty": quantity,
-            "stock_qty": quantity * (conversion_factor if conversion_factor else 1),
-            "warehouse": batch_obj.warehouse,
-            "batch_no": batch_obj.batch_no,
-        }
-    )
+    new_row.update({
+        "qty": quantity,
+        "stock_qty": quantity * (conversion_factor if conversion_factor else 1),
+        "warehouse": batch_obj.warehouse,
+        "batch_no": batch_obj.batch_no
+    })
 
     return new_row
-
-
+  
 def validate_grand_total(doc, method):
     """Validate grand total of sales invoice if 'validate_grand_total_vs_payment_amount_on_sales_invoice' is checked in CSF TZ Settings"""
-    if not frappe.db.get_single_value(
-        "CSF TZ Settings", "validate_grand_total_vs_payment_amount_on_sales_invoice"
-    ):
+    if not frappe.db.get_single_value('CSF TZ Settings', "validate_grand_total_vs_payment_amount_on_sales_invoice"):
         return
-
+    
     if len(doc.items) > 0:
         total_amount = doc.rounded_total or doc.grand_total
 
         payment_amount = sum([payment.amount for payment in doc.payments])
-
+    
         if payment_amount and total_amount != payment_amount:
-            frappe.throw(
-                _(
-                    f"<h4 class='text-center' style='background-color: #D3D3D3; font-weight: bold; font-size: 14px'>\
+            frappe.throw(_(f"<h4 class='text-center' style='background-color: #D3D3D3; font-weight: bold; font-size: 14px'>\
                 Total Amount for all Items: <strong>{total_amount}</strong> must be equal to Paid Amount: <strong>{payment_amount}</strong>,<br>\
-                Please check before submitting this invoice </h4>"
-                )
+                Please check before submitting this invoice </h4>")
             )
-
 
 @frappe.whitelist()
 def account_exists(account_name):
     return frappe.db.exists("Account", {"account_name": account_name})
 
-
 @frappe.whitelist()
 def auto_create_account():
-    abbr = frappe.get_value(
-        "Company", frappe.defaults.get_user_default("company"), "abbr"
-    )
+    abbr = frappe.get_value('Company', frappe.defaults.get_user_default("company"), 'abbr')
     account_data = [
-        {
-            "account_name": "Payroll Payable",
-            "is_group": 1,
-            "parent_account": f"Current Liabilities - {abbr}",
-        },
+        {"account_name": "Payroll Payable", "is_group": 1, "parent_account": f"Current Liabilities - {abbr}"},
         {"account_name": "NSSF Payable", "parent_account": f"Payroll Payable - {abbr}"},
         {"account_name": "NHIF Payable", "parent_account": f"Payroll Payable - {abbr}"},
         {"account_name": "PAYE Payable", "parent_account": f"Payroll Payable - {abbr}"},
         {"account_name": "SDL Payable", "parent_account": f"Payroll Payable - {abbr}"},
         {"account_name": "WCF Payable", "parent_account": f"Payroll Payable - {abbr}"},
-        {
-            "account_name": "HESLB Payable",
-            "parent_account": f"Payroll Payable - {abbr}",
-        },
-        {
-            "account_name": "Salaries and Wages",
-            "is_group": 1,
-            "parent_account": f"Indirect Expenses - {abbr}",
-        },
-        {
-            "account_name": "Salary Expense",
-            "account_type": "Expense Account",
-            "parent_account": f"Salaries and Wages - {abbr}",
-        },
-        {
-            "account_name": "NSSF Expense",
-            "account_type": "Expense Account",
-            "parent_account": f"Salaries and Wages - {abbr}",
-        },
-        {
-            "account_name": "NHIF Expense",
-            "account_type": "Expense Account",
-            "parent_account": f"Salaries and Wages - {abbr}",
-        },
-        {
-            "account_name": "SDL Expense",
-            "account_type": "Expense Account",
-            "parent_account": f"Salaries and Wages - {abbr}",
-        },
-        {
-            "account_name": "WCF Expense",
-            "account_type": "Expense Account",
-            "parent_account": f"Salaries and Wages - {abbr}",
-        },
-        {
-            "account_name": "OUTPUT VAT - 18% ",
-            "account_type": "Tax",
-            "parent_account": f"Duties and Taxes - {abbr}",
-        },
-        {
-            "account_name": "INPUT VAT - 18%  ",
-            "account_type": "Tax",
-            "parent_account": f"Tax Assets - {abbr}",
-        },
-        {
-            "account_name": "VAT Payable Account ",
-            "account_type": "Tax",
-            "parent_account": f"Duties and Taxes - {abbr}",
-        },
-        {
-            "account_name": "Taxes - Expenses",
-            "account_type": "Expense Account",
-            "parent_account": f"Direct Expenses - {abbr}",
-        },
+        {"account_name": "HESLB Payable", "parent_account": f"Payroll Payable - {abbr}"},
+        
+        {"account_name": "Salaries and Wages", "is_group": 1, "parent_account": f"Indirect Expenses - {abbr}"},
+        {"account_name": "Salary Expense", "account_type": "Expense Account", "parent_account": f"Salaries and Wages - {abbr}"},
+        {"account_name": "NSSF Expense", "account_type": "Expense Account", "parent_account": f"Salaries and Wages - {abbr}"},
+        {"account_name": "NHIF Expense", "account_type": "Expense Account", "parent_account": f"Salaries and Wages - {abbr}"},
+        {"account_name": "SDL Expense", "account_type": "Expense Account", "parent_account": f"Salaries and Wages - {abbr}"},
+        {"account_name": "WCF Expense", "account_type": "Expense Account", "parent_account": f"Salaries and Wages - {abbr}"},
+        
+        
+        {"account_name": "OUTPUT VAT - 18% ", "account_type": "Tax", "parent_account": f"Duties and Taxes - {abbr}"},
+        {"account_name": "INPUT VAT - 18%  ", "account_type": "Tax", "parent_account": f"Tax Assets - {abbr}"},
+        {"account_name": "VAT Payable Account ", "account_type": "Tax", "parent_account": f"Duties and Taxes - {abbr}"},
+        {"account_name": "Taxes - Expenses", "account_type": "Expense Account", "parent_account": f"Direct Expenses - {abbr}"},        
     ]
 
     for account_info in account_data:
@@ -2355,41 +2163,29 @@ def auto_create_account():
             account_doc.account_type = account_info.get("account_type")
             account_doc.parent_account = account_info.get("parent_account")
             account_doc.insert(ignore_permissions=True)
-        else:
+        else:   
             frappe.throw(f"Account '{account_name}' already exists.")
     return "Account added successfully."
 
-
 @frappe.whitelist()
 def create_item_tax_template():
-    abbr = frappe.get_value(
-        "Company", frappe.defaults.get_user_default("company"), "abbr"
-    )
+    abbr = frappe.get_value('Company', frappe.defaults.get_user_default("company"), 'abbr')
     item_tax_template_list = [
         {"title": f"Tanzania Exempted Sales", "tax_type": f"OUTPUT VAT - 18% - {abbr}"},
-        {
-            "title": f"Tanzania Exempted Purchases",
-            "tax_type": f"INPUT VAT - 18% - {abbr}",
-        },
+        {"title": f"Tanzania Exempted Purchases", "tax_type": f"INPUT VAT - 18% - {abbr}"},
         {"title": f"Tanzania VAT 18%", "tax_type": f"OUTPUT VAT - 18% - {abbr}"},
-        {
-            "title": f"Tanzania Purchase VAT 18%",
-            "tax_type": f"INPUT VAT - 18% - {abbr}",
-        },
-        {
-            "title": f"Zanzibar VAT Exempted",
-            "tax_type": f"VAT Payable Account - {abbr}",
-        },
+        {"title": f"Tanzania Purchase VAT 18%", "tax_type": f"INPUT VAT - 18% - {abbr}"},
+        {"title": f"Zanzibar VAT Exempted", "tax_type": f"VAT Payable Account - {abbr}"},
         {"title": f"Zanzibar VAT Tax 0%", "tax_type": f"VAT Payable Account - {abbr}"},
     ]
 
     for item_tax_template_info in item_tax_template_list:
-        item_tax_template_doc = frappe.new_doc("Item Tax Template")
-        item_tax_template_doc.title = item_tax_template_info.get("title")
-        item_tax_template_doc.append(
-            "taxes",
-            {"tax_type": item_tax_template_info.get("tax_type"), "tax_rate": ""},
-        )
+        item_tax_template_doc = frappe.new_doc('Item Tax Template')
+        item_tax_template_doc.title = item_tax_template_info.get('title')
+        item_tax_template_doc.append("taxes", {
+            "tax_type": item_tax_template_info.get('tax_type'),
+            "tax_rate": ""
+        })
         item_tax_template_doc.insert()
 
     return "Tax Template added successfully."
@@ -2397,17 +2193,16 @@ def create_item_tax_template():
 
 @frappe.whitelist()
 def create_tax_category():
-    tax_category_list = ["Sales", "Non Taxable", "Purchase"]
+    tax_category_list = ['Sales', 'Non Taxable', 'Purchase']
 
     for tax_category_name in tax_category_list:
-        tax_category_doc = frappe.new_doc("Tax Category")
+        tax_category_doc = frappe.new_doc('Tax Category')
         tax_category_doc.name = tax_category_name
         tax_category_doc.title = tax_category_name
         tax_category_doc.insert(ignore_permissions=True)
         tax_category_doc.save()
-
-    return "Tax Template added to Supplier Groups successfully."
-
+            
+    return "Tax Template added to Supplier Groups successfully." 
 
 @frappe.whitelist()
 def linking_tax_template(doctype, default_tax_template):
@@ -2415,325 +2210,108 @@ def linking_tax_template(doctype, default_tax_template):
     # tax_template = default_tax_template[0]
     # frappe.throw(str(tax_template))
 
-    abbr = frappe.get_value(
-        "Company", frappe.defaults.get_user_default("company"), "abbr"
-    )
-    item_list = frappe.get_all("Item", filters=default_tax_template)
+       
+    abbr = frappe.get_value('Company', frappe.defaults.get_user_default("company"), 'abbr')
+    item_list = frappe.get_all('Item', filters=default_tax_template)
     # frappe.throw(str(item_list))
 
     for item in item_list:
-        item_doc = frappe.get_doc("Item", item.name, fields=["default_tax_template"])
+        item_doc = frappe.get_doc("Item", item.name, fields=['default_tax_template'])
         if item_doc.default_tax_template == f"Tanzania VAT 18% - {abbr}":
 
-            item_doc.append(
-                "taxes",
-                {
-                    "item_tax_template": f"Tanzania VAT 18% - {abbr}",
-                    "tax_category": "Sales",
-                },
-            )
-            item_doc.append(
-                "taxes",
-                {
-                    "item_tax_template": f"Tanzania Purchase VAT 18% - {abbr}",
-                    "tax_category": "Purchase",
-                },
-            )
+            item_doc.append("taxes", {
+                "item_tax_template": f"Tanzania VAT 18% - {abbr}",
+                "tax_category": "Sales"
+            })
+            item_doc.append("taxes", {
+                "item_tax_template": f"Tanzania Purchase VAT 18% - {abbr}",
+                "tax_category": "Purchase"
+            })
         elif item_doc.default_tax_template == f"Tanzania Exempted Sales - {abbr}":
 
-            item_doc.append(
-                "taxes",
-                {
-                    "item_tax_template": f"Tanzania VAT 18% - {abbr}",
-                    "tax_category": "Sales",
-                },
-            )
-            item_doc.append(
-                "taxes",
-                {
-                    "item_tax_template": f"Tanzania Purchase VAT 18% - {abbr}",
-                    "tax_category": "Purchase",
-                },
-            )
+            item_doc.append("taxes", {
+                "item_tax_template": f"Tanzania VAT 18% - {abbr}",
+                "tax_category": "Sales"
+            })
+            item_doc.append("taxes", {
+                "item_tax_template": f"Tanzania Purchase VAT 18% - {abbr}",
+                "tax_category": "Purchase"
+            })
         item_doc.save()
-
+    
     return "Item Tax Template Linked successfully."
 
 
 @frappe.whitelist()
 def make_salary_components_and_structure():
-    abbr = frappe.get_value(
-        "Company", frappe.defaults.get_user_default("company"), "abbr"
-    )
-
+    abbr = frappe.get_value('Company', frappe.defaults.get_user_default("company"), 'abbr')
+    
     salary_components_earnings_list = [
-        {
-            "salary_component": "Basic",
-            "abbr": "Basic",
-            "depends_on_payment_days": 1,
-            "is_tax_applicable": 1,
-            "amount_based_on_formula": 1,
-            "formula": "base",
-        },
-        {
-            "salary_component": "WCF Expenses",
-            "abbr": "WCFExp",
-            "do_not_include_in_total": 1,
-            "is_tax_applicable": 1,
-            "amount_based_on_formula": 1,
-            "formula": "gross_pay * 0.005",
-        },
-        {
-            "salary_component": "NSSF Expenses",
-            "abbr": "NSSFExp",
-            "do_not_include_in_total": 1,
-            "is_tax_applicable": 1,
-            "amount_based_on_formula": 1,
-            "formula": "gross_pay * 0.1",
-        },
-        {
-            "salary_component": "SDL Expenses",
-            "abbr": "SDLExp",
-            "do_not_include_in_total": 1,
-            "amount_based_on_formula": 1,
-            "formula": "gross_pay * 0.035",
-        },
+        {"salary_component": "Basic", "abbr": "Basic", "depends_on_payment_days": 1, "is_tax_applicable": 1, "amount_based_on_formula": 1, "formula": "base"},
+        {"salary_component": "WCF Expenses", "abbr": "WCFExp", "do_not_include_in_total": 1, "is_tax_applicable": 1, "amount_based_on_formula": 1, "formula": "gross_pay * 0.005"},
+        {"salary_component": "NSSF Expenses", "abbr": "NSSFExp", "do_not_include_in_total": 1, "is_tax_applicable": 1, "amount_based_on_formula": 1, "formula": "gross_pay * 0.1"},
+        {"salary_component": "SDL Expenses","abbr": "SDLExp", "do_not_include_in_total": 1, "amount_based_on_formula": 1, "formula": "gross_pay * 0.035"},
     ]
     salary_components_deduction_list = [
-        {
-            "salary_component": "NSSF Employee",
-            "abbr": "NSSFEmp",
-            "amount_based_on_formula": 1,
-            "formula": "gross_pay * 0.1",
-        },
-        {
-            "salary_component": "NSSF Employer",
-            "abbr": "NSSF",
-            "do_not_include_in_total": 1,
-            "amount_based_on_formula": 1,
-            "formula": "gross_pay * 0.1",
-        },
-        {
-            "salary_component": "NHIF Employee",
-            "abbr": "NHIF",
-            "amount_based_on_formula": 1,
-            "formula": "base * 0.03",
-        },
-        {
-            "salary_component": "HESLB",
-            "abbr": "HESLB",
-            "condition": "heslb_f4_index_number",
-            "amount_based_on_formula": 1,
-            "formula": "base * 0.15",
-        },
-        {
-            "salary_component": "WCF",
-            "abbr": "WCF",
-            "do_not_include_in_total": 1,
-            "amount_based_on_formula": 1,
-            "formula": "gross_pay * 0.005",
-        },
-        {
-            "salary_component": "SDL",
-            "abbr": "SDL",
-            "do_not_include_in_total": 1,
-            "amount_based_on_formula": 1,
-            "formula": "gross_pay * 0.035",
-        },
-        {
-            "salary_component": "PAYE Payable",
-            "abbr": "PAYE",
-            "do_not_include_in_total": 1,
-            "condition": "((gross_pay - NSSFEmp) >= 270000) and ((gross_pay - NSSFEmp) < 520000)",
-            "amount_based_on_formula": 1,
-            "formula": "(((gross_pay - NSSFEmp)) - 270000) * 0.08",
-        },
-        {
-            "salary_component": "PAYE Payable",
-            "abbr": "PAYE",
-            "codition": "((gross_pay - NSSFEmp) >= 760000) and ((gross_pay - NSSFEmp) < 1000000)",
-            "amount_based_on_formula": 1,
-            "formula": "(((gross_pay - NSSFEmp) - 760000) * 0.25) + 68000",
-        },
-        {
-            "salary_component": "PAYE Payable",
-            "abbr": "PAYE",
-            "codition": "((gross_pay - NSSFEmp) >= 760000) and ((gross_pay - NSSFEmp) < 1000000)",
-            "amount_based_on_formula": 1,
-            "formula": "(((gross_pay - NSSFEmp) - 760000) * 0.25) + 68000",
-        },
-        {
-            "salary_component": "PAYE Payable",
-            "abbr": "PAYE",
-            "codition": "((gross_pay - NSSFEmp) >= 1000000)",
-            "amount_based_on_formula": 1,
-            "formula": "(((gross_pay - NSSFEmp) - 1000000) * 0.3) + 128000",
-        },
+        {"salary_component": "NSSF Employee", "abbr": "NSSFEmp", "amount_based_on_formula": 1, "formula": "gross_pay * 0.1"},
+        {"salary_component": "NSSF Employer", "abbr": "NSSF", "do_not_include_in_total": 1, "amount_based_on_formula": 1, "formula": "gross_pay * 0.1"},
+        {"salary_component": "NHIF Employee", "abbr": "NHIF", "amount_based_on_formula": 1, "formula": "base * 0.03"},
+        {"salary_component": "HESLB","abbr": "HESLB","condition": "heslb_f4_index_number", "amount_based_on_formula": 1, "formula": "base * 0.15"},
+        {"salary_component": "WCF","abbr": "WCF", "do_not_include_in_total": 1, "amount_based_on_formula": 1, "formula": "gross_pay * 0.005"},
+        {"salary_component": "SDL","abbr": "SDL", "do_not_include_in_total": 1, "amount_based_on_formula": 1, "formula": "gross_pay * 0.035"},
+        {"salary_component": "PAYE Payable","abbr": "PAYE", "do_not_include_in_total": 1, "condition": "((gross_pay - NSSFEmp) >= 270000) and ((gross_pay - NSSFEmp) < 520000)","amount_based_on_formula": 1, "formula": "(((gross_pay - NSSFEmp)) - 270000) * 0.08"},
+        {"salary_component": "PAYE Payable","abbr": "PAYE", "codition": "((gross_pay - NSSFEmp) >= 760000) and ((gross_pay - NSSFEmp) < 1000000)", "amount_based_on_formula": 1, "formula": "(((gross_pay - NSSFEmp) - 760000) * 0.25) + 68000"},
+        {"salary_component": "PAYE Payable","abbr": "PAYE", "codition": "((gross_pay - NSSFEmp) >= 760000) and ((gross_pay - NSSFEmp) < 1000000)", "amount_based_on_formula": 1, "formula": "(((gross_pay - NSSFEmp) - 760000) * 0.25) + 68000"},
+        {"salary_component": "PAYE Payable","abbr": "PAYE", "codition": "((gross_pay - NSSFEmp) >= 1000000)", "amount_based_on_formula": 1, "formula": "(((gross_pay - NSSFEmp) - 1000000) * 0.3) + 128000"},
     ]
     salary_components_list = [
-        {
-            "salary_component": "WCF Expenses",
-            "type": "Earning",
-            "abbr": "WCFExp",
-            "do_not_include_in_total": 1,
-            "remove_if_zero_valued": 1,
-            "account": f"WCF Expense - {abbr}",
-        },
-        {
-            "salary_component": "NSSF Expenses",
-            "type": "Earning",
-            "abbr": "NSSFExp",
-            "do_not_include_in_total": 1,
-            "remove_if_zero_valued": 1,
-            "account": f"NSSF Expense - {abbr}",
-        },
-        {
-            "salary_component": "SDL Expenses",
-            "type": "Earning",
-            "abbr": "SDLExp",
-            "do_not_include_in_total": 1,
-            "remove_if_zero_valued": 1,
-            "account": f"SDL Expense - {abbr}",
-        },
-        {
-            "salary_component": "NSSF Employee",
-            "type": "Deduction",
-            "abbr": "NSSFEmp",
-            "do_not_include_in_total": 1,
-            "remove_if_zero_valued": 1,
-            "account": f"NSSF Payable - {abbr}",
-        },
-        {
-            "salary_component": "NSSF Employer",
-            "type": "Deduction",
-            "abbr": "NSSF",
-            "do_not_include_in_total": 1,
-            "remove_if_zero_valued": 1,
-            "account": f"NSSF Payable - {abbr}",
-        },
-        {
-            "salary_component": "NHIF Employee",
-            "abbr": "NHIF",
-            "type": "Deduction",
-            "abbr": "NHIF",
-            "remove_if_zero_valued": 1,
-            "account": f"NHIF Payable - {abbr}",
-        },
-        {
-            "salary_component": "HESLB",
-            "abbr": "HESLB",
-            "type": "Deduction",
-            "remove_if_zero_valued": 1,
-            "account": f"HESLB Payable - {abbr}",
-        },
-        {
-            "salary_component": "WCF",
-            "abbr": "WCF",
-            "type": "Deduction",
-            "do_not_include_in_total": 1,
-            "remove_if_zero_valued": 1,
-            "account": f"WCF Payable - {abbr}",
-        },
-        {
-            "salary_component": "SDL",
-            "abbr": "SDL",
-            "type": "Deduction",
-            "do_not_include_in_total": 1,
-            "remove_if_zero_valued": 1,
-            "account": f"SDL Payable - {abbr}",
-        },
-        {
-            "salary_component": "PAYE Payable",
-            "abbr": "PAYE",
-            "type": "Deduction",
-            "remove_if_zero_valued": 1,
-            "account": f"PAYE Payable - {abbr}",
-        },
+        {"salary_component": "WCF Expenses", "type": "Earning", "abbr": "WCFExp", "do_not_include_in_total": 1, "remove_if_zero_valued": 1, "account": f"WCF Expense - {abbr}"},
+        {"salary_component": "NSSF Expenses", "type": "Earning", "abbr": "NSSFExp", "do_not_include_in_total": 1, "remove_if_zero_valued": 1,"account": f"NSSF Expense - {abbr}"},
+        {"salary_component": "SDL Expenses","type": "Earning", "abbr": "SDLExp", "do_not_include_in_total": 1, "remove_if_zero_valued": 1,"account": f"SDL Expense - {abbr}"},
+        {"salary_component": "NSSF Employee", "type": "Deduction", "abbr": "NSSFEmp", "do_not_include_in_total": 1,"remove_if_zero_valued": 1,"account": f"NSSF Payable - {abbr}"},
+        {"salary_component": "NSSF Employer", "type": "Deduction", "abbr": "NSSF", "do_not_include_in_total": 1,"remove_if_zero_valued": 1,"account": f"NSSF Payable - {abbr}"},
+        {"salary_component": "NHIF Employee", "abbr": "NHIF","type": "Deduction", "abbr": "NHIF","remove_if_zero_valued": 1,"account": f"NHIF Payable - {abbr}"},
+        {"salary_component": "HESLB","abbr": "HESLB", "type": "Deduction", "remove_if_zero_valued": 1, "account": f"HESLB Payable - {abbr}"},
+        {"salary_component": "WCF","abbr": "WCF", "type": "Deduction", "do_not_include_in_total": 1, "remove_if_zero_valued": 1, "account": f"WCF Payable - {abbr}"},
+        {"salary_component": "SDL","abbr": "SDL", "type": "Deduction", "do_not_include_in_total": 1, "remove_if_zero_valued": 1, "account": f"SDL Payable - {abbr}"},
+        {"salary_component": "PAYE Payable","abbr": "PAYE", "type": "Deduction", "remove_if_zero_valued": 1, "account": f"PAYE Payable - {abbr}"},
     ]
     # frappe.throw(str(salary_components_list))
-
+    
     for salary_component in salary_components_list:
-        salary_component_doc = frappe.new_doc("Salary Component")
-        salary_component_doc.salary_component = salary_component.get("salary_component")
-        salary_component_doc.type = salary_component.get("type")
-        salary_component_doc.abbr = salary_component.get("abbr")
-        salary_component_doc.remove_if_zero_valued = salary_component.get(
-            "remove_if_zero_valued"
-        )
-        salary_component_doc.do_not_include_in_total = salary_component.get(
-            "do_not_include_in_total"
-        )
-        salary_component_doc.append(
-            "accounts", {"account": salary_component.get("account")}
-        )
+        salary_component_doc = frappe.new_doc('Salary Component')
+        salary_component_doc.salary_component = salary_component.get('salary_component')
+        salary_component_doc.type = salary_component.get('type')
+        salary_component_doc.abbr = salary_component.get('abbr')
+        salary_component_doc.remove_if_zero_valued = salary_component.get('remove_if_zero_valued')
+        salary_component_doc.do_not_include_in_total = salary_component.get('do_not_include_in_total')
+        salary_component_doc.append("accounts", {
+            "account": salary_component.get('account')
+        })
         salary_component_doc.insert()
+    
 
-    salary_structure_doc = frappe.new_doc("Salary Structure")
+    salary_structure_doc = frappe.new_doc('Salary Structure')
     salary_structure_doc.name = "Tanzania Mainland"
     salary_structure_doc.is_active = "Yes"
     for salary_components in salary_components_earnings_list:
-        salary_structure_doc.append(
-            "earnings",
-            {
-                "salary_component": salary_components.get("salary_component"),
-                "depends_on_payment_days": salary_components.get(
-                    "depends_on_payment_days"
-                ),
-                "is_tax_applicable": salary_components.get("is_tax_applicable"),
-                "amount_based_on_formula": salary_components.get(
-                    "amount_based_on_formula"
-                ),
-                "do_not_include_in_total": salary_components.get(
-                    "do_not_include_in_total"
-                ),
-                "formula": salary_components.get("formula"),
-            },
-        )
+        salary_structure_doc.append("earnings", {
+            "salary_component": salary_components.get('salary_component'),
+            "depends_on_payment_days": salary_components.get('depends_on_payment_days'),
+            "is_tax_applicable": salary_components.get('is_tax_applicable'),
+            "amount_based_on_formula": salary_components.get('amount_based_on_formula'),
+            "do_not_include_in_total": salary_components.get('do_not_include_in_total'),
+            "formula": salary_components.get('formula'),
+        })
     for salary_components in salary_components_deduction_list:
-        salary_structure_doc.append(
-            "deductions",
-            {
-                "salary_component": salary_components.get("salary_component"),
-                "depends_on_payment_days": salary_components.get(
-                    "depends_on_payment_days"
-                ),
-                "is_tax_applicable": salary_components.get("is_tax_applicable"),
-                "amount_based_on_formula": salary_components.get(
-                    "amount_based_on_formula"
-                ),
-                "do_not_include_in_total": salary_components.get(
-                    "do_not_include_in_total"
-                ),
-                "formula": salary_components.get("formula"),
-            },
-        )
+        salary_structure_doc.append("deductions", {
+            "salary_component": salary_components.get('salary_component'),
+            "depends_on_payment_days": salary_components.get('depends_on_payment_days'),
+            "is_tax_applicable": salary_components.get('is_tax_applicable'),
+            "amount_based_on_formula": salary_components.get('amount_based_on_formula'),
+            "do_not_include_in_total": salary_components.get('do_not_include_in_total'),
+            "formula": salary_components.get('formula'),
+        })
     salary_structure_doc.insert(ignore_permissions=True)
     salary_structure_doc.submit()
     return "Salary Components and Structure are created successfully."
-
-
-def target_warehouse_based_price_list(doc, method):
-    check = frappe.db.get_single_value(
-        "CSF TZ Settings", "target_warehouse_based_price_list"
-    )
-    if check:
-        for item in doc.items:
-            if item.item_code is None or item.warehouse is None:
-                frappe.throw(
-                    f"Both Item Code {item.item_code} and Warehouse {item.warehouse} are required."
-                )
-
-            price_list = frappe.db.get_value("Warehouse", item.warehouse, "price_list")
-            if not price_list:
-                frappe.throw(
-                    f"Price List not found. Please set one in Warehouse {item.warehouse}"
-                )
-
-            rate = frappe.db.get_value(
-                "Item Price",
-                {"item_code": item.item_code, "price_list": price_list},
-                "price_list_rate",
-            )
-            item.price_list_rate = rate
-            item.rate = rate
-            item.amount = item.qty * rate

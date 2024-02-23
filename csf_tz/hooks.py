@@ -155,14 +155,11 @@ doc_events = {
         "before_cancel": "csf_tz.custom_api.update_delivery_on_sales_invoice",
     },
     "Account": {
-        "on_update": "csf_tz.custom_api.on_cancel_fees",
+        "on_update": "csf_tz.custom_api.create_indirect_expense_item",
         "after_insert": "csf_tz.custom_api.create_indirect_expense_item",
     },
     "Purchase Invoice": {
         "on_submit": "csf_tz.custom_api.make_withholding_tax_gl_entries_for_purchase",
-    },
-    "Purchase Order": {
-        "validate": "csf_tz.custom_api.target_warehouse_based_price_list",
     },
     "Fees": {
         "before_insert": "csf_tz.custom_api.set_fee_abbr",
@@ -240,7 +237,7 @@ scheduler_events = {
         ],
         "*/15 * * * *": [
             "csf_tz.csftz_hooks.items_revaluation.process_incorrect_balance_qty",
-            "csf_tz.stanbic.sftp.sync_all_stanbank_files",
+            "csf_tz.stanbic.sftp.sync_all_stanbank_files"
         ],
         # Routine for every day 3:30am at night
         "30 3 * * *": [
