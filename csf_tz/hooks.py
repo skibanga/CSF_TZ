@@ -66,7 +66,9 @@ doctype_js = {
     "Salary Slip": "csf_tz/salary_slip.js",
     "Landed Cost Voucher": "csf_tz/landed_cost_voucher.js",
     "Additional Salary": "csf_tz/additional_salary.js",
-    "BOM": "csf_tz/bom_addittional_costs.js"
+    "BOM": "csf_tz/bom_addittional_costs.js",
+    "Travel Request": "csf_tz/travel_request.js",
+    "Employee Adbance": "csf_tz/employee_advance.js",
 }
 doctype_list_js = {
     "Custom Field": "csf_tz/custom_field.js",
